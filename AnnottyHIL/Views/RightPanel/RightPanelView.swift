@@ -8,8 +8,11 @@ struct RightPanelView: View {
     let isUNetLoading: Bool
     let isUNetProcessing: Bool
     let classNames: [String]
+    let definedClassCount: Int
     @Binding var hiddenClassIDs: Set<Int>
     let onSettingsTapped: () -> Void
+    var onAddClassTapped: (() -> Void)? = nil
+    var onRemoveLastClassTapped: (() -> Void)? = nil
     // HIL parameters (optional — shown only when HIL is enabled)
     var isHILEnabled: Bool = false
     var isHILSubmitting: Bool = false
@@ -29,16 +32,7 @@ struct RightPanelView: View {
 
     /// Preset colors for annotation (index+1 = classID)
     /// These must match MetalRenderer.classColors exactly
-    private let presetColors: [Color] = [
-        Color(red: 1, green: 0, blue: 0),        // 1: red
-        Color(red: 1, green: 0.5, blue: 0),      // 2: orange
-        Color(red: 1, green: 1, blue: 0),        // 3: yellow
-        Color(red: 0, green: 1, blue: 0),        // 4: green
-        Color(red: 0, green: 1, blue: 1),        // 5: cyan
-        Color(red: 0, green: 0, blue: 1),        // 6: blue
-        Color(red: 0.5, green: 0, blue: 1),      // 7: purple
-        Color(red: 1, green: 0.4, blue: 0.7)     // 8: pink
-    ]
+    private let presetColors: [Color] = CanvasViewModel.classColors
 
     /// Display name for a class (shows class number if unnamed)
     private func displayName(for index: Int) -> String {
@@ -62,9 +56,10 @@ struct RightPanelView: View {
                     .font(.caption)
                     .foregroundColor(.gray)
 
-                // Color + name list (vertical)
+                // Show only defined classes
                 VStack(spacing: 3) {
-                    ForEach(Array(presetColors.enumerated()), id: \.offset) { index, color in
+                    ForEach(0..<definedClassCount, id: \.self) { index in
+                        let color = presetColors[index]
                         let classID = index + 1
                         let isHidden = hiddenClassIDs.contains(classID)
                         HStack(spacing: 4) {
@@ -115,6 +110,47 @@ struct RightPanelView: View {
                     }
                 }
 
+                // Add/Remove class buttons
+                if definedClassCount < MaskClass.maxClasses {
+                    Button(action: { onAddClassTapped?() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.caption)
+                            Text("Add Class")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.cyan)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.cyan.opacity(0.1))
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if definedClassCount > 0 {
+                    Button(action: { onRemoveLastClassTapped?() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "minus.circle")
+                                .font(.caption2)
+                            Text("Remove Last")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.gray.opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // No-class hint
+                if definedClassCount == 0 {
+                    Text("Add a class to start annotating")
+                        .font(.caption2)
+                        .foregroundColor(.gray.opacity(0.5))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+                }
+
                 // Fill mode toggle button
                 Button(action: {
                     isFillMode.toggle()
@@ -133,6 +169,8 @@ struct RightPanelView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .disabled(definedClassCount == 0)
+                .opacity(definedClassCount == 0 ? 0.3 : 1.0)
 
                 Text(isFillMode ? "Tap to fill" : "Fill")
                     .font(.caption2)
@@ -156,6 +194,8 @@ struct RightPanelView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .disabled(definedClassCount == 0)
+                .opacity(definedClassCount == 0 ? 0.3 : 1.0)
 
                 Text(isSmoothMode ? "Trace edge" : "Smooth")
                     .font(.caption2)
@@ -362,7 +402,8 @@ struct RightPanelView: View {
         isSmoothMode: .constant(false),
         isUNetLoading: false,
         isUNetProcessing: false,
-        classNames: ["iris", "eyelid", "sclera", "pupil", "", "", "", ""],
+        classNames: ["lateral_rectus", "medial_rectus", "optic_nerve", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        definedClassCount: 3,
         hiddenClassIDs: .constant([]),
         onSettingsTapped: {}
     )

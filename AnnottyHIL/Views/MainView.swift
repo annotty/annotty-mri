@@ -16,6 +16,8 @@ struct MainView: View {
     @State private var showingDashboard = false
     @State private var showingHILSettings = false
     @State private var isDropTargeted = false
+    @State private var showingAddClassAlert = false
+    @State private var newClassName = ""
 
     init() {
         let settings = HILSettings()
@@ -68,11 +70,19 @@ struct MainView: View {
                     isUNetLoading: viewModel.isUNetLoading,
                     isUNetProcessing: viewModel.isUNetProcessing,
                     classNames: viewModel.classNames,
+                    definedClassCount: viewModel.definedClassCount,
                     hiddenClassIDs: $viewModel.hiddenClassIDs,
                     onSettingsTapped: {
                         withAnimation(.easeInOut(duration: 0.25)) {
                             showingImageSettings = true
                         }
+                    },
+                    onAddClassTapped: {
+                        newClassName = ""
+                        showingAddClassAlert = true
+                    },
+                    onRemoveLastClassTapped: {
+                        viewModel.removeLastClass()
                     },
                     isHILEnabled: hilSettings.isConfigured,
                     isHILSubmitting: hilViewModel.isHILSubmitting,
@@ -128,6 +138,7 @@ struct MainView: View {
                     maskEdgeAlpha: $viewModel.maskEdgeAlpha,
                     smoothKernelSize: $viewModel.smoothKernelSize,
                     classNames: $viewModel.classNames,
+                    definedClassCount: viewModel.definedClassCount,
                     onClearClassNames: { viewModel.clearClassNames() },
                     onDeleteAllFiles: { viewModel.deleteAllFiles() }
                 )
@@ -193,6 +204,19 @@ struct MainView: View {
                     }
                 }
             )
+        }
+        .alert("Add Class", isPresented: $showingAddClassAlert) {
+            TextField("Class name", text: $newClassName)
+            Button("Cancel", role: .cancel) {}
+            Button("Add") {
+                let name = newClassName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !name.isEmpty {
+                    viewModel.addClass(name: name)
+                }
+            }
+            .disabled(newClassName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text("Enter a name for the new annotation class.")
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
             // Save when app goes to background

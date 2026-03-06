@@ -10,7 +10,15 @@ nonisolated(unsafe) private let classRGBColors: [(UInt8, UInt8, UInt8)] = [
     (0, 255, 255),     // 5: cyan
     (0, 0, 255),       // 6: blue
     (128, 0, 255),     // 7: purple
-    (255, 102, 178)    // 8: pink
+    (255, 102, 178),   // 8: pink
+    (153, 76, 0),      // 9: brown
+    (128, 128, 128),   // 10: gray
+    (255, 191, 204),   // 11: light pink
+    (128, 255, 128),   // 12: light green
+    (178, 217, 255),   // 13: light blue
+    (204, 153, 255),   // 14: lavender
+    (255, 217, 0),     // 15: gold
+    (0, 128, 128)      // 16: teal
 ]
 
 nonisolated(unsafe) private let exactColorLookup: [UInt32: UInt8] = {
@@ -74,26 +82,37 @@ class CanvasViewModel: ObservableObject {
 
     /// Preset colors mapped to class IDs (index+1 = classID)
     /// These must match the colors in MetalRenderer.classColors exactly
-    /// Class 1=red, 2=orange, 3=yellow, 4=green, 5=cyan, 6=blue, 7=purple, 8=pink
     static let classColors: [Color] = [
-        Color(red: 1, green: 0, blue: 0),        // 1: red
-        Color(red: 1, green: 0.5, blue: 0),      // 2: orange
-        Color(red: 1, green: 1, blue: 0),        // 3: yellow
-        Color(red: 0, green: 1, blue: 0),        // 4: green
-        Color(red: 0, green: 1, blue: 1),        // 5: cyan
-        Color(red: 0, green: 0, blue: 1),        // 6: blue
-        Color(red: 0.5, green: 0, blue: 1),      // 7: purple
-        Color(red: 1, green: 0.4, blue: 0.7)     // 8: pink
+        Color(red: 1, green: 0, blue: 0),           // 1: red
+        Color(red: 1, green: 0.5, blue: 0),         // 2: orange
+        Color(red: 1, green: 1, blue: 0),           // 3: yellow
+        Color(red: 0, green: 1, blue: 0),           // 4: green
+        Color(red: 0, green: 1, blue: 1),           // 5: cyan
+        Color(red: 0, green: 0, blue: 1),           // 6: blue
+        Color(red: 0.5, green: 0, blue: 1),         // 7: purple
+        Color(red: 1, green: 0.4, blue: 0.7),       // 8: pink
+        Color(red: 0.6, green: 0.3, blue: 0),       // 9: brown
+        Color(red: 0.5, green: 0.5, blue: 0.5),     // 10: gray
+        Color(red: 1, green: 0.75, blue: 0.8),      // 11: light pink
+        Color(red: 0.5, green: 1, blue: 0.5),       // 12: light green
+        Color(red: 0.7, green: 0.85, blue: 1),      // 13: light blue
+        Color(red: 0.8, green: 0.6, blue: 1),       // 14: lavender
+        Color(red: 1, green: 0.85, blue: 0),        // 15: gold
+        Color(red: 0, green: 0.5, blue: 0.5)        // 16: teal
     ]
 
     /// Current active class ID (1-8, 0 = eraser/background)
     @Published private(set) var currentClassID: Int = 1
 
+    /// Number of defined classes (only these are shown in UI and available for painting)
+    @Published private(set) var definedClassCount: Int = 0
+
     /// Custom class names (index 0-7 = class 1-8)
     /// Empty string means unnamed class
-    @Published var classNames: [String] = Array(repeating: "", count: 8) {
+    @Published var classNames: [String] = Array(repeating: "", count: 16) {
         didSet {
             saveClassNames()
+            saveLabelConfigToProject()
         }
     }
 
@@ -264,6 +283,7 @@ class CanvasViewModel: ObservableObject {
             try ProjectFileService.shared.initializeProject(at: documentsURL)
             print("[Project] Folder structure: images/, annotations/, labels/")
             ProjectFileService.shared.cleanInbox()
+            loadLabelConfigFromProject()
             reloadImagesFromProject()
         } catch {
             print("[Project] Failed to initialize: \(error)")
@@ -285,6 +305,7 @@ class CanvasViewModel: ObservableObject {
         do {
             try ProjectFileService.shared.initializeProject(at: folderURL)
             print("[Project] Opened project: \(folderURL.lastPathComponent)")
+            loadLabelConfigFromProject()
             reloadImagesFromProject()
         } catch {
             print("[Project] Failed to open: \(error)")
@@ -759,6 +780,8 @@ class CanvasViewModel: ObservableObject {
     private var strokePointCounter: Int = 0
 
     func beginStroke(at point: CGPoint) {
+        // Block drawing if no classes are defined
+        guard definedClassCount > 0 else { return }
         isDrawing = true
         lastDrawPoint = point
         strokePoints = [point]
@@ -1651,22 +1674,85 @@ class CanvasViewModel: ObservableObject {
     private func loadClassNames() {
         if let saved = UserDefaults.standard.stringArray(forKey: Self.classNamesKey) {
             // Ensure we always have exactly 8 elements
-            if saved.count == 8 {
+            if saved.count == 16 {
                 classNames = saved
             } else {
                 // Pad or truncate to 8 elements
                 var adjusted = saved
-                while adjusted.count < 8 { adjusted.append("") }
-                classNames = Array(adjusted.prefix(8))
+                while adjusted.count < 16 { adjusted.append("") }
+                classNames = Array(adjusted.prefix(16))
             }
-            print("[ClassNames] Loaded: \(classNames.filter { !$0.isEmpty })")
+            // Restore definedClassCount from non-empty names
+            definedClassCount = classNames.prefix(MaskClass.maxClasses).lastIndex(where: { !$0.isEmpty }).map { $0 + 1 } ?? 0
+            print("[ClassNames] Loaded: \(classNames.filter { !$0.isEmpty }), defined: \(definedClassCount)")
         }
     }
 
-    /// Clear all class names
+    /// Clear all class names and reset defined count
     func clearClassNames() {
-        classNames = Array(repeating: "", count: 8)
+        definedClassCount = 0
+        classNames = Array(repeating: "", count: 16)
         print("[ClassNames] Cleared")
+    }
+
+    /// Add a new class with the given name. Returns the classID (1-based) or nil if at max.
+    @discardableResult
+    func addClass(name: String) -> Int? {
+        guard definedClassCount < MaskClass.maxClasses else { return nil }
+        let index = definedClassCount
+        definedClassCount += 1
+        classNames[index] = name
+        // Auto-select the newly added class
+        annotationColor = Self.classColors[index]
+        print("[ClassNames] Added class \(index + 1): \(name)")
+        return index + 1
+    }
+
+    /// Remove the last defined class
+    func removeLastClass() {
+        guard definedClassCount > 0 else { return }
+        let index = definedClassCount - 1
+        classNames[index] = ""
+        definedClassCount -= 1
+        // If current selection was the removed class, select the last remaining
+        if currentClassID > definedClassCount {
+            if definedClassCount > 0 {
+                annotationColor = Self.classColors[definedClassCount - 1]
+            }
+        }
+        print("[ClassNames] Removed class \(index + 1), now \(definedClassCount) classes")
+    }
+
+    /// Load label_config.json from project and apply to classNames/definedClassCount
+    func loadLabelConfigFromProject() {
+        guard let entries = ProjectFileService.shared.loadLabelConfig() else { return }
+        var names = Array(repeating: "", count: 16)
+        let count = min(entries.count, MaskClass.maxClasses)
+        for i in 0..<count {
+            names[i] = entries[i].name
+        }
+        definedClassCount = count
+        // Update without triggering saveLabelConfig (avoid re-writing what we just loaded)
+        UserDefaults.standard.set(names, forKey: Self.classNamesKey)
+        classNames = names
+        if count > 0 {
+            annotationColor = Self.classColors[0]
+        }
+        print("[LabelConfig] Applied \(count) classes from label_config.json")
+    }
+
+    /// Save current class definitions to label_config.json in project root
+    private func saveLabelConfigToProject() {
+        guard definedClassCount > 0 else { return }
+        let entries = (0..<definedClassCount).map { index -> ProjectFileService.LabelClassEntry in
+            let (r, g, b) = classRGBColors[index]
+            return ProjectFileService.LabelClassEntry(
+                id: index + 1,
+                name: classNames[index],
+                color: [Int(r), Int(g), Int(b)]
+            )
+        }
+        ProjectFileService.shared.saveLabelConfig(classes: entries)
     }
 
     /// Delete all project files (images, annotations, labels) and reset canvas state

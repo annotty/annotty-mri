@@ -28,8 +28,8 @@ class MetalRenderer: NSObject, ObservableObject {
     /// Mask edge opacity (0.0 - 1.0, affects edge/outline)
     @Published var maskEdgeAlpha: Float = 1.0
 
-    /// Class colors for rendering (index 0 unused, 1-8 = class colors)
-    /// Default: red, orange, yellow, green, cyan, blue, purple, pink
+    /// Class colors for rendering (index 0 unused, 1-16 = class colors)
+    /// Default: red, orange, yellow, green, cyan, blue, purple, pink, + 8 more
     var classColors: [simd_float4] = [
         simd_float4(0, 0, 0, 0),        // 0: unused
         simd_float4(1, 0, 0, 1),        // 1: red
@@ -39,7 +39,15 @@ class MetalRenderer: NSObject, ObservableObject {
         simd_float4(0, 1, 1, 1),        // 5: cyan
         simd_float4(0, 0, 1, 1),        // 6: blue
         simd_float4(0.5, 0, 1, 1),      // 7: purple
-        simd_float4(1, 0.4, 0.7, 1)     // 8: pink
+        simd_float4(1, 0.4, 0.7, 1),    // 8: pink
+        simd_float4(0.6, 0.3, 0, 1),    // 9: brown
+        simd_float4(0.5, 0.5, 0.5, 1),  // 10: gray
+        simd_float4(1, 0.75, 0.8, 1),   // 11: light pink
+        simd_float4(0.5, 1, 0.5, 1),    // 12: light green
+        simd_float4(0.7, 0.85, 1, 1),   // 13: light blue
+        simd_float4(0.8, 0.6, 1, 1),    // 14: lavender
+        simd_float4(1, 0.85, 0, 1),     // 15: gold
+        simd_float4(0, 0.5, 0.5, 1)     // 16: teal
     ]
 
     // MARK: - State
@@ -183,10 +191,15 @@ class MetalRenderer: NSObject, ObservableObject {
                 visibleColors[classID].w = 0  // Set alpha to 0
             }
         }
+        // Pad to 17 elements if needed
+        var padded = visibleColors
+        while padded.count < 17 { padded.append(simd_float4(0, 0, 0, 0)) }
         let colors = (
-            visibleColors[0], visibleColors[1], visibleColors[2], visibleColors[3],
-            visibleColors[4], visibleColors[5], visibleColors[6], visibleColors[7],
-            visibleColors[8]
+            padded[0],  padded[1],  padded[2],  padded[3],
+            padded[4],  padded[5],  padded[6],  padded[7],
+            padded[8],  padded[9],  padded[10], padded[11],
+            padded[12], padded[13], padded[14], padded[15],
+            padded[16]
         )
 
         return CanvasUniforms(
@@ -405,10 +418,12 @@ struct CanvasUniforms {
     var maskSize: simd_float2
     var maskScaleFactor: Float
     var _padding2: Float
-    /// Class colors (index 0 unused, 1-8 = class colors)
+    /// Class colors (index 0 unused, 1-16 = class colors)
     var classColors: (simd_float4, simd_float4, simd_float4, simd_float4,
                       simd_float4, simd_float4, simd_float4, simd_float4,
-                      simd_float4)  // 9 elements to match MAX_CLASSES + 1
+                      simd_float4, simd_float4, simd_float4, simd_float4,
+                      simd_float4, simd_float4, simd_float4, simd_float4,
+                      simd_float4)  // 17 elements to match MAX_CLASSES + 1
 }
 
 /// Bridge structure matching ShaderTypes.h

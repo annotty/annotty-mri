@@ -11,7 +11,7 @@ struct MaskClass: Identifiable, Equatable {
     var name: String
 
     /// Maximum number of classes allowed
-    static let maxClasses = 8
+    static let maxClasses = 16
 
     init(id: Int, originalColor: Color, displayColor: Color? = nil, name: String? = nil) {
         self.id = id

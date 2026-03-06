@@ -10,6 +10,7 @@ struct ImageSettingsOverlayView: View {
     @Binding var maskEdgeAlpha: Float
     @Binding var smoothKernelSize: Int
     @Binding var classNames: [String]
+    let definedClassCount: Int
     var onClearClassNames: () -> Void
     var onDeleteAllFiles: () -> Void
 
@@ -18,16 +19,7 @@ struct ImageSettingsOverlayView: View {
     @State private var showDeleteFinalAlert = false
 
     /// Preset colors for class editing display (must match MetalRenderer.classColors)
-    private let presetColors: [Color] = [
-        Color(red: 1, green: 0, blue: 0),        // 1: red
-        Color(red: 1, green: 0.5, blue: 0),      // 2: orange
-        Color(red: 1, green: 1, blue: 0),        // 3: yellow
-        Color(red: 0, green: 1, blue: 0),        // 4: green
-        Color(red: 0, green: 1, blue: 1),        // 5: cyan
-        Color(red: 0, green: 0, blue: 1),        // 6: blue
-        Color(red: 0.5, green: 0, blue: 1),      // 7: purple
-        Color(red: 1, green: 0.4, blue: 0.7)     // 8: pink
-    ]
+    private let presetColors: [Color] = CanvasViewModel.classColors
 
     var body: some View {
         HStack(spacing: 0) {
@@ -169,7 +161,7 @@ struct ImageSettingsOverlayView: View {
                         .padding(.horizontal, 16)
 
                         VStack(spacing: 6) {
-                            ForEach(0..<8, id: \.self) { index in
+                            ForEach(0..<definedClassCount, id: \.self) { index in
                                 HStack(spacing: 8) {
                                     // Color indicator
                                     Circle()
@@ -419,7 +411,8 @@ struct IntSettingsSliderView: View {
             maskFillAlpha: .constant(0.5),
             maskEdgeAlpha: .constant(1.0),
             smoothKernelSize: .constant(21),
-            classNames: .constant(["iris", "eyelid", "sclera", "pupil", "", "", "", ""]),
+            classNames: .constant(["iris", "eyelid", "sclera", "pupil", "", "", "", "", "", "", "", "", "", "", "", ""]),
+            definedClassCount: 4,
             onClearClassNames: {},
             onDeleteAllFiles: {}
         )

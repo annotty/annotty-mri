@@ -3,8 +3,8 @@
 
 #include <simd/simd.h>
 
-/// Maximum number of annotation classes (1-8)
-#define MAX_CLASSES 8
+/// Maximum number of annotation classes (1-16)
+#define MAX_CLASSES 16
 
 /// Uniforms passed to canvas shaders
 struct CanvasUniforms {
@@ -30,7 +30,7 @@ struct CanvasUniforms {
     float maskScaleFactor;
     /// Padding for alignment
     float _padding2;
-    /// Class colors (index 0 unused, 1-8 = class colors)
+    /// Class colors (index 0 unused, 1-16 = class colors)
     simd_float4 classColors[MAX_CLASSES + 1];
 };
 

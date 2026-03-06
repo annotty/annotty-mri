@@ -30,8 +30,8 @@ class TextureManager {
     /// Maximum mask dimension
     nonisolated static let maxMaskDimension = 4096
 
-    /// Maximum number of classes (1-8)
-    static let maxClasses = 8
+    /// Maximum number of classes (1-16)
+    static let maxClasses = 16
 
     init(device: MTLDevice) {
         self.device = device

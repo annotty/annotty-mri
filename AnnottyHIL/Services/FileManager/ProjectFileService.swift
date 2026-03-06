@@ -202,6 +202,46 @@ class ProjectFileService {
         return deletedCount
     }
 
+    // MARK: - Label Config
+
+    static let labelConfigFileName = "label_config.json"
+
+    /// Label config entry matching label_config.json schema
+    struct LabelClassEntry: Codable {
+        let id: Int
+        let name: String
+        let color: [Int]
+    }
+
+    struct LabelConfig: Codable {
+        let classes: [LabelClassEntry]
+    }
+
+    /// Load label_config.json from project root (if it exists)
+    func loadLabelConfig() -> [LabelClassEntry]? {
+        guard let root = projectRoot else { return nil }
+        let configURL = root.appendingPathComponent(Self.labelConfigFileName)
+        guard fileManager.fileExists(atPath: configURL.path),
+              let data = try? Data(contentsOf: configURL),
+              let config = try? JSONDecoder().decode(LabelConfig.self, from: data) else {
+            return nil
+        }
+        print("[LabelConfig] Loaded \(config.classes.count) classes")
+        return config.classes
+    }
+
+    /// Save label_config.json to project root
+    func saveLabelConfig(classes: [LabelClassEntry]) {
+        guard let root = projectRoot else { return }
+        let configURL = root.appendingPathComponent(Self.labelConfigFileName)
+        let config = LabelConfig(classes: classes)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(config) else { return }
+        try? data.write(to: configURL)
+        print("[LabelConfig] Saved \(classes.count) classes")
+    }
+
     // MARK: - Inbox Cleanup
 
     /// Remove residual files from Documents/Inbox/ left by AirDrop or share sheet.
