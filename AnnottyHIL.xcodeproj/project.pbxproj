@@ -1,0 +1,741 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		022CD93B02227936D7C41CF5 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = BABE5511BCC15ECCAE25A24F /* ZIPFoundation */; };
+		0CF65E524DA43BE2B46F0BB2 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 0056E9E4DA095D2F76706355 /* Shaders.metal */; };
+		0E29E6E7D5B6CE9E419CCC27 /* CanvasTransform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 907A485C4737E7D335884F11 /* CanvasTransform.swift */; };
+		0FF17D8C7841D89FC98EEB8D /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FC8D484A826825628374F2 /* ExportService.swift */; };
+		179F243592CC651C27AB96AF /* HILViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63FA4E3B2749BDF623A08C69 /* HILViewModel.swift */; };
+		18D53B3A1410D2E5FBDD4361 /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A64C76B173B00E887F0277 /* MetalRenderer.swift */; };
+		1EC1D846E226DD1AA86E1F63 /* DrawingCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B026B84564EE8133CA325C77 /* DrawingCanvasView.swift */; };
+		25A7DF4068EAD31E53EABE57 /* unet_fold1.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 37F948146D1B66ED7584A54D /* unet_fold1.mlpackage */; };
+		3A67074BFA2D750EEF84EEEE /* ImageNavigatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F28FB6C7727CCF892D221E0 /* ImageNavigatorView.swift */; };
+		3CBFE577983EDE9D72EE10F9 /* unet_fold2.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 364DC43835FB2AE060AA5039 /* unet_fold2.mlpackage */; };
+		4A92CCBF782CB14BAECA3F1F /* ImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5964ED06DB3149AC4C4DBC71 /* ImportCoordinator.swift */; };
+		4E844979398E0760432C2DE2 /* unet_fold3.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 0A10958A5DB4F4312BC96BD0 /* unet_fold3.mlpackage */; };
+		5010AE3CA6F0B4845FDB59B6 /* CGAffineTransform+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E3706132B35D70312068CFC /* CGAffineTransform+Extensions.swift */; };
+		514DBA4C1C644C59E4AFA07A /* ServerSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA03C467A45FAEDBBA966AA /* ServerSettingsView.swift */; };
+		54AD2405DB8B6AC4AC238C35 /* TextureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBFFE52EB8589D2062B6A8C /* TextureManager.swift */; };
+		59D7AF28B9F964B8A9848F09 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EEBDD21292FF704B622F7045 /* Assets.xcassets */; };
+		5B4BA2D20E1B3C9DAF1A0D0A /* HILDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05E0961747D5BA8C2BCEEA08 /* HILDashboardView.swift */; };
+		63CBE18BF9AC353FE1CF3F5A /* COCOExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4090D63B20B74DD02AAFAD99 /* COCOExporter.swift */; };
+		66798A1FBD798084CA8AE1E0 /* ImagePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BE4080F1108179FFEFAFA72 /* ImagePickerView.swift */; };
+		6B4445AF3A15843A7191E3F4 /* AnnottyHILApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D84802100A6D26BF948DE68 /* AnnottyHILApp.swift */; };
+		72195E45AA839A79DF62FC6E /* ImageItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE8C7FC3893D55DB04149F98 /* ImageItem.swift */; };
+		726031D372735B4807153426 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E83DE81C7D4817A29827462 /* MainView.swift */; };
+		794795C6D1D6610CB1C63F60 /* PNGExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC347BB1A395D084DE087A7 /* PNGExporter.swift */; };
+		7A50579BA7F1E62D82C8072B /* CacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93D1F5994EF9FA81129691C4 /* CacheManager.swift */; };
+		7BAA1E19631D42582B834FC4 /* TopBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A4A12E3B39F21AEE2D0FD8C /* TopBarView.swift */; };
+		84116A3A85A5A993F4941625 /* ImageLoadCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F83C4C94C60AEB525D24967 /* ImageLoadCache.swift */; };
+		863143A820CDFDC52976D396 /* unet_fold4.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 42F5B920FADD82B652F153B8 /* unet_fold4.mlpackage */; };
+		9550000D6321A8BA81C9C31F /* UIColor+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFDCDA5E3E838BE72899BC9D /* UIColor+Hex.swift */; };
+		9F2C3166DCA46A460C8A9AAF /* UndoManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1422B0EF81D7814A898367D /* UndoManager.swift */; };
+		9FEBF47EFB8D905B65C1FA9F /* ColorMaskParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C58A7BC0CB37C090DF4930C /* ColorMaskParser.swift */; };
+		BD74C349702B02521586B506 /* CanvasContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC7E6FD4D4A5C2731A16146 /* CanvasContainerView.swift */; };
+		BDC4A338A357539E3ECEE7BC /* YOLOExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6A84E67C5B9FC88169B00AC /* YOLOExporter.swift */; };
+		BF4B1960763F7E1090A03B3D /* UNetService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4814CE455B25316F97D33366 /* UNetService.swift */; };
+		BFE52515B20E96ECD50045A7 /* ExportSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BA7555D84F3CBA3F0E56C96 /* ExportSheetView.swift */; };
+		C20ADD7563A3E2A96653DFAB /* MaskClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8068274D6040C3B3397A065 /* MaskClass.swift */; };
+		C3E32096A4DC68D529A9B25F /* ContourExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3183AE91C104C19546E17C24 /* ContourExtractor.swift */; };
+		C6FA0187BEE44E82F37946BB /* ModelSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C58F23F09EC8777FD98CDEC6 /* ModelSyncManager.swift */; };
+		D6ED66D5A604B285F09BDD20 /* AutoSaveService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 264F1944FDFD216F5297178A /* AutoSaveService.swift */; };
+		D8EF9D8097B1E68BAE2EA5D8 /* CanvasViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2553CA63EDFBA489A3626C1 /* CanvasViewModel.swift */; };
+		D95ABF898375B8203F349298 /* SmoothStrokeOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3284C396B0A2D8A9DB323497 /* SmoothStrokeOverlay.swift */; };
+		DF4165A683E5D4AC0BFAF75B /* UndoAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BAAA1F90ADF7AA9C0284BFE /* UndoAction.swift */; };
+		E22348CFCEF72BDBEA0BB8C0 /* MetalCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 513F104C595E37CA884E4C7D /* MetalCanvasView.swift */; };
+		E4841587A533D62AAAFF9E4D /* ProjectFileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528E110F27E8A3B0D4F0B022 /* ProjectFileService.swift */; };
+		E4BEFBC08640599EFA02F254 /* simd+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ACA1EE31C318E534D376815 /* simd+Extensions.swift */; };
+		E94F0EF1962EB72F180CEF8E /* ImageSettingsOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE43F010610701C418BC18E0 /* ImageSettingsOverlayView.swift */; };
+		EBA073D18506D1EA63607310 /* GestureCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C9C965DEABD24888361AFA1 /* GestureCoordinator.swift */; };
+		EC097935858DC979795AA3F9 /* TransparencySliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E81ABE392B2D17B55F31EDB7 /* TransparencySliderView.swift */; };
+		F07DDAC74B8F98AC871318B7 /* AnnotationProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04CABF4DB4CF365754716B8D /* AnnotationProject.swift */; };
+		F4501E9353A0365849E85C02 /* AnnotationLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02450C2EA55C54C79CE6EFE8 /* AnnotationLoader.swift */; };
+		F511A53388F84750193ED275 /* HILServerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B282E4654B9476778199C76 /* HILServerClient.swift */; };
+		F750D382D7ABDF022193BAA6 /* ThicknessSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31D7220D2E099BA51FC07EA8 /* ThicknessSliderView.swift */; };
+		F94C92117E90BBAC6606D0D2 /* RightPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DDDCC5CABB0B0C385575C61 /* RightPanelView.swift */; };
+		FA8862186C0A1AEE419F2CE7 /* TrainingStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CE20451F312CAF48FFCE92D /* TrainingStatusView.swift */; };
+		FC4C405534822F4623AF4781 /* HILSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385FA5A1064159691BCFE315 /* HILSettings.swift */; };
+		FD6ED80AB85D72444065FA3D /* InternalMask.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0960B9C02D9AC4675241CA2 /* InternalMask.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0056E9E4DA095D2F76706355 /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
+		02450C2EA55C54C79CE6EFE8 /* AnnotationLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationLoader.swift; sourceTree = "<group>"; };
+		04CABF4DB4CF365754716B8D /* AnnotationProject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationProject.swift; sourceTree = "<group>"; };
+		05E0961747D5BA8C2BCEEA08 /* HILDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HILDashboardView.swift; sourceTree = "<group>"; };
+		0A10958A5DB4F4312BC96BD0 /* unet_fold3.mlpackage */ = {isa = PBXFileReference; path = unet_fold3.mlpackage; sourceTree = "<group>"; };
+		0D84802100A6D26BF948DE68 /* AnnottyHILApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnottyHILApp.swift; sourceTree = "<group>"; };
+		0F83C4C94C60AEB525D24967 /* ImageLoadCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageLoadCache.swift; sourceTree = "<group>"; };
+		14FC8D484A826825628374F2 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
+		1FC7E6FD4D4A5C2731A16146 /* CanvasContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasContainerView.swift; sourceTree = "<group>"; };
+		264F1944FDFD216F5297178A /* AutoSaveService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoSaveService.swift; sourceTree = "<group>"; };
+		2A4A12E3B39F21AEE2D0FD8C /* TopBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopBarView.swift; sourceTree = "<group>"; };
+		2BE4080F1108179FFEFAFA72 /* ImagePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePickerView.swift; sourceTree = "<group>"; };
+		2E3706132B35D70312068CFC /* CGAffineTransform+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CGAffineTransform+Extensions.swift"; sourceTree = "<group>"; };
+		3183AE91C104C19546E17C24 /* ContourExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContourExtractor.swift; sourceTree = "<group>"; };
+		31D7220D2E099BA51FC07EA8 /* ThicknessSliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThicknessSliderView.swift; sourceTree = "<group>"; };
+		3284C396B0A2D8A9DB323497 /* SmoothStrokeOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmoothStrokeOverlay.swift; sourceTree = "<group>"; };
+		364DC43835FB2AE060AA5039 /* unet_fold2.mlpackage */ = {isa = PBXFileReference; path = unet_fold2.mlpackage; sourceTree = "<group>"; };
+		37F948146D1B66ED7584A54D /* unet_fold1.mlpackage */ = {isa = PBXFileReference; path = unet_fold1.mlpackage; sourceTree = "<group>"; };
+		385FA5A1064159691BCFE315 /* HILSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HILSettings.swift; sourceTree = "<group>"; };
+		3AEFDEE7D0FAB8C16AB43B40 /* AnnottyHIL.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = AnnottyHIL.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3B282E4654B9476778199C76 /* HILServerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HILServerClient.swift; sourceTree = "<group>"; };
+		3CE20451F312CAF48FFCE92D /* TrainingStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingStatusView.swift; sourceTree = "<group>"; };
+		4090D63B20B74DD02AAFAD99 /* COCOExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = COCOExporter.swift; sourceTree = "<group>"; };
+		42F5B920FADD82B652F153B8 /* unet_fold4.mlpackage */ = {isa = PBXFileReference; path = unet_fold4.mlpackage; sourceTree = "<group>"; };
+		4814CE455B25316F97D33366 /* UNetService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UNetService.swift; sourceTree = "<group>"; };
+		513F104C595E37CA884E4C7D /* MetalCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalCanvasView.swift; sourceTree = "<group>"; };
+		528E110F27E8A3B0D4F0B022 /* ProjectFileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFileService.swift; sourceTree = "<group>"; };
+		5964ED06DB3149AC4C4DBC71 /* ImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportCoordinator.swift; sourceTree = "<group>"; };
+		5ACA1EE31C318E534D376815 /* simd+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "simd+Extensions.swift"; sourceTree = "<group>"; };
+		5BA7555D84F3CBA3F0E56C96 /* ExportSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportSheetView.swift; sourceTree = "<group>"; };
+		5C9C965DEABD24888361AFA1 /* GestureCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureCoordinator.swift; sourceTree = "<group>"; };
+		63FA4E3B2749BDF623A08C69 /* HILViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HILViewModel.swift; sourceTree = "<group>"; };
+		6AEB495419CD26B30878F554 /* ShaderTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderTypes.h; sourceTree = "<group>"; };
+		6C58A7BC0CB37C090DF4930C /* ColorMaskParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorMaskParser.swift; sourceTree = "<group>"; };
+		6E83DE81C7D4817A29827462 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
+		72BF068186EACBFEE99B057A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7BAAA1F90ADF7AA9C0284BFE /* UndoAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoAction.swift; sourceTree = "<group>"; };
+		8DDDCC5CABB0B0C385575C61 /* RightPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightPanelView.swift; sourceTree = "<group>"; };
+		907A485C4737E7D335884F11 /* CanvasTransform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasTransform.swift; sourceTree = "<group>"; };
+		93D1F5994EF9FA81129691C4 /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheManager.swift; sourceTree = "<group>"; };
+		9C4DDE601EA8FACE96D2B043 /* AnnottyHIL-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AnnottyHIL-Bridging-Header.h"; sourceTree = "<group>"; };
+		9F28FB6C7727CCF892D221E0 /* ImageNavigatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageNavigatorView.swift; sourceTree = "<group>"; };
+		AFA03C467A45FAEDBBA966AA /* ServerSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSettingsView.swift; sourceTree = "<group>"; };
+		B026B84564EE8133CA325C77 /* DrawingCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingCanvasView.swift; sourceTree = "<group>"; };
+		B0960B9C02D9AC4675241CA2 /* InternalMask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InternalMask.swift; sourceTree = "<group>"; };
+		BE43F010610701C418BC18E0 /* ImageSettingsOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSettingsOverlayView.swift; sourceTree = "<group>"; };
+		C1422B0EF81D7814A898367D /* UndoManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoManager.swift; sourceTree = "<group>"; };
+		C2553CA63EDFBA489A3626C1 /* CanvasViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasViewModel.swift; sourceTree = "<group>"; };
+		C58F23F09EC8777FD98CDEC6 /* ModelSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelSyncManager.swift; sourceTree = "<group>"; };
+		C8068274D6040C3B3397A065 /* MaskClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskClass.swift; sourceTree = "<group>"; };
+		CDC347BB1A395D084DE087A7 /* PNGExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PNGExporter.swift; sourceTree = "<group>"; };
+		DBBFFE52EB8589D2062B6A8C /* TextureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextureManager.swift; sourceTree = "<group>"; };
+		DE8C7FC3893D55DB04149F98 /* ImageItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageItem.swift; sourceTree = "<group>"; };
+		E1A64C76B173B00E887F0277 /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
+		E6A84E67C5B9FC88169B00AC /* YOLOExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YOLOExporter.swift; sourceTree = "<group>"; };
+		E81ABE392B2D17B55F31EDB7 /* TransparencySliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparencySliderView.swift; sourceTree = "<group>"; };
+		EEBDD21292FF704B622F7045 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		EFDCDA5E3E838BE72899BC9D /* UIColor+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIColor+Hex.swift"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7F0EA326673DBF7D6E07E504 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				022CD93B02227936D7C41CF5 /* ZIPFoundation in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1CE3E56099E09EE561FEF3BA = {
+			isa = PBXGroup;
+			children = (
+				40EFD7927A5DF8C98DA75727 /* AnnottyHIL */,
+				5CA3FE2D67987F7B046021A2 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3075599F41D2B88FCB3D00D9 /* Metal */ = {
+			isa = PBXGroup;
+			children = (
+				E1A64C76B173B00E887F0277 /* MetalRenderer.swift */,
+				DBBFFE52EB8589D2062B6A8C /* TextureManager.swift */,
+				9DAD67929AAD6D9A83208F3C /* Shaders */,
+			);
+			path = Metal;
+			sourceTree = "<group>";
+		};
+		34223B7A8DA3ACF08359C0C3 /* HIL */ = {
+			isa = PBXGroup;
+			children = (
+				93D1F5994EF9FA81129691C4 /* CacheManager.swift */,
+				3B282E4654B9476778199C76 /* HILServerClient.swift */,
+				385FA5A1064159691BCFE315 /* HILSettings.swift */,
+				C58F23F09EC8777FD98CDEC6 /* ModelSyncManager.swift */,
+			);
+			path = HIL;
+			sourceTree = "<group>";
+		};
+		3CF9B126A15FE0C59FB2C012 /* Export */ = {
+			isa = PBXGroup;
+			children = (
+				4090D63B20B74DD02AAFAD99 /* COCOExporter.swift */,
+				14FC8D484A826825628374F2 /* ExportService.swift */,
+				CDC347BB1A395D084DE087A7 /* PNGExporter.swift */,
+				E6A84E67C5B9FC88169B00AC /* YOLOExporter.swift */,
+			);
+			path = Export;
+			sourceTree = "<group>";
+		};
+		3D8167B3F00509D067A7507F /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				37F948146D1B66ED7584A54D /* unet_fold1.mlpackage */,
+				364DC43835FB2AE060AA5039 /* unet_fold2.mlpackage */,
+				0A10958A5DB4F4312BC96BD0 /* unet_fold3.mlpackage */,
+				42F5B920FADD82B652F153B8 /* unet_fold4.mlpackage */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		40EFD7927A5DF8C98DA75727 /* AnnottyHIL */ = {
+			isa = PBXGroup;
+			children = (
+				9C4DDE601EA8FACE96D2B043 /* AnnottyHIL-Bridging-Header.h */,
+				0D84802100A6D26BF948DE68 /* AnnottyHILApp.swift */,
+				EEBDD21292FF704B622F7045 /* Assets.xcassets */,
+				72BF068186EACBFEE99B057A /* Info.plist */,
+				EB80435F349D1C8C1D6B14CC /* Gestures */,
+				3075599F41D2B88FCB3D00D9 /* Metal */,
+				78E2E5D8BCED7552198EFFEA /* Models */,
+				8532654368E770CC54E8A670 /* Services */,
+				97005D49EDD363A34E1001CA /* Utils */,
+				BFF2CBF4E64B598EA32ED784 /* ViewModels */,
+				98232C023CB96D0C7D0D8BEA /* Views */,
+			);
+			path = AnnottyHIL;
+			sourceTree = "<group>";
+		};
+		4234B4E98BC5E1756A269BC9 /* FileManager */ = {
+			isa = PBXGroup;
+			children = (
+				02450C2EA55C54C79CE6EFE8 /* AnnotationLoader.swift */,
+				264F1944FDFD216F5297178A /* AutoSaveService.swift */,
+				5964ED06DB3149AC4C4DBC71 /* ImportCoordinator.swift */,
+				528E110F27E8A3B0D4F0B022 /* ProjectFileService.swift */,
+			);
+			path = FileManager;
+			sourceTree = "<group>";
+		};
+		532A192CAF1E8BEBF54DF41B /* HIL */ = {
+			isa = PBXGroup;
+			children = (
+				05E0961747D5BA8C2BCEEA08 /* HILDashboardView.swift */,
+				AFA03C467A45FAEDBBA966AA /* ServerSettingsView.swift */,
+				3CE20451F312CAF48FFCE92D /* TrainingStatusView.swift */,
+			);
+			path = HIL;
+			sourceTree = "<group>";
+		};
+		5633325C7CC0FDE5C2EA2017 /* UNet */ = {
+			isa = PBXGroup;
+			children = (
+				4814CE455B25316F97D33366 /* UNetService.swift */,
+				3D8167B3F00509D067A7507F /* Models */,
+			);
+			path = UNet;
+			sourceTree = "<group>";
+		};
+		574454753711B79E0059F92C /* Common */ = {
+			isa = PBXGroup;
+			children = (
+				5BA7555D84F3CBA3F0E56C96 /* ExportSheetView.swift */,
+				2BE4080F1108179FFEFAFA72 /* ImagePickerView.swift */,
+			);
+			path = Common;
+			sourceTree = "<group>";
+		};
+		5CA3FE2D67987F7B046021A2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3AEFDEE7D0FAB8C16AB43B40 /* AnnottyHIL.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		637DF2489C7EC9AA1F448FC6 /* CanvasView */ = {
+			isa = PBXGroup;
+			children = (
+				1FC7E6FD4D4A5C2731A16146 /* CanvasContainerView.swift */,
+				513F104C595E37CA884E4C7D /* MetalCanvasView.swift */,
+				3284C396B0A2D8A9DB323497 /* SmoothStrokeOverlay.swift */,
+			);
+			path = CanvasView;
+			sourceTree = "<group>";
+		};
+		63A27A973E9F04FB8EE18D93 /* ImageProcessing */ = {
+			isa = PBXGroup;
+			children = (
+				6C58A7BC0CB37C090DF4930C /* ColorMaskParser.swift */,
+				3183AE91C104C19546E17C24 /* ContourExtractor.swift */,
+				0F83C4C94C60AEB525D24967 /* ImageLoadCache.swift */,
+			);
+			path = ImageProcessing;
+			sourceTree = "<group>";
+		};
+		78E2E5D8BCED7552198EFFEA /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				04CABF4DB4CF365754716B8D /* AnnotationProject.swift */,
+				907A485C4737E7D335884F11 /* CanvasTransform.swift */,
+				DE8C7FC3893D55DB04149F98 /* ImageItem.swift */,
+				B0960B9C02D9AC4675241CA2 /* InternalMask.swift */,
+				C8068274D6040C3B3397A065 /* MaskClass.swift */,
+				7BAAA1F90ADF7AA9C0284BFE /* UndoAction.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		8532654368E770CC54E8A670 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				3CF9B126A15FE0C59FB2C012 /* Export */,
+				4234B4E98BC5E1756A269BC9 /* FileManager */,
+				34223B7A8DA3ACF08359C0C3 /* HIL */,
+				63A27A973E9F04FB8EE18D93 /* ImageProcessing */,
+				5633325C7CC0FDE5C2EA2017 /* UNet */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		97005D49EDD363A34E1001CA /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				2E3706132B35D70312068CFC /* CGAffineTransform+Extensions.swift */,
+				5ACA1EE31C318E534D376815 /* simd+Extensions.swift */,
+				EFDCDA5E3E838BE72899BC9D /* UIColor+Hex.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		98232C023CB96D0C7D0D8BEA /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				6E83DE81C7D4817A29827462 /* MainView.swift */,
+				637DF2489C7EC9AA1F448FC6 /* CanvasView */,
+				574454753711B79E0059F92C /* Common */,
+				532A192CAF1E8BEBF54DF41B /* HIL */,
+				AF907DCFBBAE05BC10985B31 /* LeftPanel */,
+				F7573F61CA2924D1A42185D3 /* RightPanel */,
+				C1EB5B7B8C6E2B460701F3DA /* TopBar */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		9DAD67929AAD6D9A83208F3C /* Shaders */ = {
+			isa = PBXGroup;
+			children = (
+				0056E9E4DA095D2F76706355 /* Shaders.metal */,
+				6AEB495419CD26B30878F554 /* ShaderTypes.h */,
+			);
+			path = Shaders;
+			sourceTree = "<group>";
+		};
+		AF907DCFBBAE05BC10985B31 /* LeftPanel */ = {
+			isa = PBXGroup;
+			children = (
+				31D7220D2E099BA51FC07EA8 /* ThicknessSliderView.swift */,
+			);
+			path = LeftPanel;
+			sourceTree = "<group>";
+		};
+		BFF2CBF4E64B598EA32ED784 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				C2553CA63EDFBA489A3626C1 /* CanvasViewModel.swift */,
+				63FA4E3B2749BDF623A08C69 /* HILViewModel.swift */,
+				C1422B0EF81D7814A898367D /* UndoManager.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		C1EB5B7B8C6E2B460701F3DA /* TopBar */ = {
+			isa = PBXGroup;
+			children = (
+				9F28FB6C7727CCF892D221E0 /* ImageNavigatorView.swift */,
+				2A4A12E3B39F21AEE2D0FD8C /* TopBarView.swift */,
+			);
+			path = TopBar;
+			sourceTree = "<group>";
+		};
+		EB80435F349D1C8C1D6B14CC /* Gestures */ = {
+			isa = PBXGroup;
+			children = (
+				B026B84564EE8133CA325C77 /* DrawingCanvasView.swift */,
+				5C9C965DEABD24888361AFA1 /* GestureCoordinator.swift */,
+			);
+			path = Gestures;
+			sourceTree = "<group>";
+		};
+		F7573F61CA2924D1A42185D3 /* RightPanel */ = {
+			isa = PBXGroup;
+			children = (
+				BE43F010610701C418BC18E0 /* ImageSettingsOverlayView.swift */,
+				8DDDCC5CABB0B0C385575C61 /* RightPanelView.swift */,
+				E81ABE392B2D17B55F31EDB7 /* TransparencySliderView.swift */,
+			);
+			path = RightPanel;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4C6D0F0E5AB112397259EC4D /* AnnottyHIL */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 455845CC62AB07379F3E2256 /* Build configuration list for PBXNativeTarget "AnnottyHIL" */;
+			buildPhases = (
+				F0837BF6BAFF6064285411F0 /* Sources */,
+				7603AE5D4D3572479415FEF4 /* Resources */,
+				7F0EA326673DBF7D6E07E504 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AnnottyHIL;
+			packageProductDependencies = (
+				BABE5511BCC15ECCAE25A24F /* ZIPFoundation */,
+			);
+			productName = AnnottyHIL;
+			productReference = 3AEFDEE7D0FAB8C16AB43B40 /* AnnottyHIL.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0D2967FAEFE815A683BD3EC7 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					4C6D0F0E5AB112397259EC4D = {
+						DevelopmentTeam = FKLM5SV532;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = F34D35CEBD15243CCEA08BCD /* Build configuration list for PBXProject "AnnottyHIL" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 1CE3E56099E09EE561FEF3BA;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				47EEEC6660EDFBD948926771 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4C6D0F0E5AB112397259EC4D /* AnnottyHIL */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7603AE5D4D3572479415FEF4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				59D7AF28B9F964B8A9848F09 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F0837BF6BAFF6064285411F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F4501E9353A0365849E85C02 /* AnnotationLoader.swift in Sources */,
+				F07DDAC74B8F98AC871318B7 /* AnnotationProject.swift in Sources */,
+				6B4445AF3A15843A7191E3F4 /* AnnottyHILApp.swift in Sources */,
+				D6ED66D5A604B285F09BDD20 /* AutoSaveService.swift in Sources */,
+				5010AE3CA6F0B4845FDB59B6 /* CGAffineTransform+Extensions.swift in Sources */,
+				63CBE18BF9AC353FE1CF3F5A /* COCOExporter.swift in Sources */,
+				7A50579BA7F1E62D82C8072B /* CacheManager.swift in Sources */,
+				BD74C349702B02521586B506 /* CanvasContainerView.swift in Sources */,
+				0E29E6E7D5B6CE9E419CCC27 /* CanvasTransform.swift in Sources */,
+				D8EF9D8097B1E68BAE2EA5D8 /* CanvasViewModel.swift in Sources */,
+				9FEBF47EFB8D905B65C1FA9F /* ColorMaskParser.swift in Sources */,
+				C3E32096A4DC68D529A9B25F /* ContourExtractor.swift in Sources */,
+				1EC1D846E226DD1AA86E1F63 /* DrawingCanvasView.swift in Sources */,
+				0FF17D8C7841D89FC98EEB8D /* ExportService.swift in Sources */,
+				BFE52515B20E96ECD50045A7 /* ExportSheetView.swift in Sources */,
+				EBA073D18506D1EA63607310 /* GestureCoordinator.swift in Sources */,
+				5B4BA2D20E1B3C9DAF1A0D0A /* HILDashboardView.swift in Sources */,
+				F511A53388F84750193ED275 /* HILServerClient.swift in Sources */,
+				FC4C405534822F4623AF4781 /* HILSettings.swift in Sources */,
+				179F243592CC651C27AB96AF /* HILViewModel.swift in Sources */,
+				72195E45AA839A79DF62FC6E /* ImageItem.swift in Sources */,
+				84116A3A85A5A993F4941625 /* ImageLoadCache.swift in Sources */,
+				3A67074BFA2D750EEF84EEEE /* ImageNavigatorView.swift in Sources */,
+				66798A1FBD798084CA8AE1E0 /* ImagePickerView.swift in Sources */,
+				E94F0EF1962EB72F180CEF8E /* ImageSettingsOverlayView.swift in Sources */,
+				4A92CCBF782CB14BAECA3F1F /* ImportCoordinator.swift in Sources */,
+				FD6ED80AB85D72444065FA3D /* InternalMask.swift in Sources */,
+				726031D372735B4807153426 /* MainView.swift in Sources */,
+				C20ADD7563A3E2A96653DFAB /* MaskClass.swift in Sources */,
+				E22348CFCEF72BDBEA0BB8C0 /* MetalCanvasView.swift in Sources */,
+				18D53B3A1410D2E5FBDD4361 /* MetalRenderer.swift in Sources */,
+				C6FA0187BEE44E82F37946BB /* ModelSyncManager.swift in Sources */,
+				794795C6D1D6610CB1C63F60 /* PNGExporter.swift in Sources */,
+				E4841587A533D62AAAFF9E4D /* ProjectFileService.swift in Sources */,
+				F94C92117E90BBAC6606D0D2 /* RightPanelView.swift in Sources */,
+				514DBA4C1C644C59E4AFA07A /* ServerSettingsView.swift in Sources */,
+				0CF65E524DA43BE2B46F0BB2 /* Shaders.metal in Sources */,
+				D95ABF898375B8203F349298 /* SmoothStrokeOverlay.swift in Sources */,
+				54AD2405DB8B6AC4AC238C35 /* TextureManager.swift in Sources */,
+				F750D382D7ABDF022193BAA6 /* ThicknessSliderView.swift in Sources */,
+				7BAA1E19631D42582B834FC4 /* TopBarView.swift in Sources */,
+				FA8862186C0A1AEE419F2CE7 /* TrainingStatusView.swift in Sources */,
+				EC097935858DC979795AA3F9 /* TransparencySliderView.swift in Sources */,
+				9550000D6321A8BA81C9C31F /* UIColor+Hex.swift in Sources */,
+				BF4B1960763F7E1090A03B3D /* UNetService.swift in Sources */,
+				DF4165A683E5D4AC0BFAF75B /* UndoAction.swift in Sources */,
+				9F2C3166DCA46A460C8A9AAF /* UndoManager.swift in Sources */,
+				BDC4A338A357539E3ECEE7BC /* YOLOExporter.swift in Sources */,
+				E4BEFBC08640599EFA02F254 /* simd+Extensions.swift in Sources */,
+				25A7DF4068EAD31E53EABE57 /* unet_fold1.mlpackage in Sources */,
+				3CBFE577983EDE9D72EE10F9 /* unet_fold2.mlpackage in Sources */,
+				4E844979398E0760432C2DE2 /* unet_fold3.mlpackage in Sources */,
+				863143A820CDFDC52976D396 /* unet_fold4.mlpackage in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		83E18B4CE1040AA6B1C70C8D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		88A47B4C471C8129ECEFED5A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FKLM5SV532;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AnnottyHIL/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yk-gankeisei.AnnottyHIL";
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "AnnottyHIL/AnnottyHIL-Bridging-Header.h";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CD9C4C6598895CA31E33DA81 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FKLM5SV532;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AnnottyHIL/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yk-gankeisei.AnnottyHIL";
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "AnnottyHIL/AnnottyHIL-Bridging-Header.h";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		FC4CD746E08A2328B398B5D7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		455845CC62AB07379F3E2256 /* Build configuration list for PBXNativeTarget "AnnottyHIL" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				88A47B4C471C8129ECEFED5A /* Debug */,
+				CD9C4C6598895CA31E33DA81 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F34D35CEBD15243CCEA08BCD /* Build configuration list for PBXProject "AnnottyHIL" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				83E18B4CE1040AA6B1C70C8D /* Debug */,
+				FC4CD746E08A2328B398B5D7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		47EEEC6660EDFBD948926771 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.19;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BABE5511BCC15ECCAE25A24F /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 47EEEC6660EDFBD948926771 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0D2967FAEFE815A683BD3EC7 /* Project object */;
+}
