@@ -8,21 +8,25 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
-# images_completed: アノテーション完了済み学習データ（read-only）
+# --- MRI データ ---
+NIFTI_RAW_DIR = os.path.join(DATA_DIR, "nifti", "raw")
+NIFTI_LABELS_DIR = os.path.join(DATA_DIR, "nifti", "labels")
+SLICES_DIR = os.path.join(DATA_DIR, "slices")
+
+# --- レガシー（眼底画像用、後方互換） ---
 COMPLETED_IMAGES_DIR = os.path.join(DATA_DIR, "images_completed", "images")
 COMPLETED_ANNOTATIONS_DIR = os.path.join(DATA_DIR, "images_completed", "annotations")
-
-# images_unannotated: アノテーション対象データ（iPadから書き込み）
 UNANNOTATED_IMAGES_DIR = os.path.join(DATA_DIR, "images_unannotated", "images")
 UNANNOTATED_ANNOTATIONS_DIR = os.path.join(DATA_DIR, "images_unannotated", "annotations")
 
+# --- モデル ---
 MODELS_DIR = os.path.join(DATA_DIR, "models")
 PYTORCH_DIR = os.path.join(MODELS_DIR, "pytorch")
 COREML_DIR = os.path.join(MODELS_DIR, "coreml")
 PRETRAINED_PATH = os.path.join(PYTORCH_DIR, "pretrained.pt")
 CURRENT_PT_DIR = os.path.join(PYTORCH_DIR, "current_pt")
 VERSIONS_DIR = os.path.join(PYTORCH_DIR, "versions")
-BEST_MODEL_PATH = os.path.join(CURRENT_PT_DIR, "best.pt")  # ベストfold（CoreML変換・フォールバック用）
+BEST_MODEL_PATH = os.path.join(CURRENT_PT_DIR, "best.pt")
 COREML_PATH = os.path.join(COREML_DIR, "SegmentationModel.mlpackage")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
@@ -31,7 +35,7 @@ LOG_DIR = os.path.join(BASE_DIR, "logs")
 ENCODER_NAME = "resnet34"
 ENCODER_WEIGHTS = "imagenet"
 IN_CHANNELS = 3
-NUM_CLASSES = 1
+NUM_CLASSES = 7  # 0=背景 + 6クラス（外直筋,内直筋,上直筋,下直筋,視神経,眼球）
 IMAGE_SIZE = 512
 
 # === 学習 ===
@@ -57,6 +61,7 @@ def get_fold_model_path(fold_idx: int) -> str:
 
 # === ディレクトリ自動作成 ===
 for d in [
+    NIFTI_RAW_DIR, NIFTI_LABELS_DIR, SLICES_DIR,
     COMPLETED_IMAGES_DIR, COMPLETED_ANNOTATIONS_DIR,
     UNANNOTATED_IMAGES_DIR, UNANNOTATED_ANNOTATIONS_DIR,
     PYTORCH_DIR, CURRENT_PT_DIR, VERSIONS_DIR, COREML_DIR, STATIC_DIR, LOG_DIR,

@@ -1,0 +1,24 @@
+# === Data (DICOM, NIfTI, PNG slices, models) ===
+T2_Coronal/
+server/data/
+scripts/output/
+
+# === Python ===
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# === macOS / Xcode ===
+.DS_Store
+*.xcuserdata
+xcuserdata/
+DerivedData/
+build/
+
+# === IDE ===
+.idea/
+.vscode/
+
+# === Logs ===
+server/logs/

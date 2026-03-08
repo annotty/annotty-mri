@@ -1,7 +1,7 @@
 """
 FastAPI サーバー
-眼底血管セグメンテーション HIL アノテーションシステム
-annotation → train → deploy のHILループを実現
+眼窩MRIセグメンテーション HIL アノテーションシステム
+NIfTI → スライスPNG → iPad annotation → NIfTI再統合 のHILループを実現
 """
 import os
 import re
@@ -32,7 +32,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Retinal HIL Server")
+app = FastAPI(title="Orbital MRI HIL Server")
 
 app.add_middleware(
     CORSMiddleware,
@@ -63,6 +63,15 @@ training_cancel_event = threading.Event()
 # =====================================================
 # セキュリティ: パストラバーサル対策
 # =====================================================
+def validate_case_id(case_id: str) -> bool:
+    """症例IDとして安全かチェック"""
+    if not re.match(r"^[\w\-\.]+$", case_id):
+        return False
+    if ".." in case_id or "/" in case_id or "\\" in case_id:
+        return False
+    return True
+
+
 def validate_image_id(image_id: str) -> bool:
     """ファイル名として安全かチェック"""
     if not re.match(r"^[\w\-\.]+\.png$", image_id):
@@ -79,37 +88,46 @@ def validate_image_id(image_id: str) -> bool:
 def get_info():
     stats = dm.get_stats()
     return {
-        "name": "Retinal HIL Server",
-        "total_images": stats["unannotated_images"],
-        "labeled_images": stats["unannotated_labeled"],
-        "unlabeled_images": stats["unannotated_unlabeled"],
+        "name": "Orbital MRI HIL Server",
+        "total_cases": stats["total_cases"],
+        "total_slices": stats["total_slices"],
+        "labeled_slices": stats["labeled_slices"],
+        "unlabeled_slices": stats["unlabeled_slices"],
         "model_loaded": os.path.exists(BEST_MODEL_PATH),
         "training_status": training_status["status"],
-        # 追加フィールド（後方互換: iPadは無視可能）
-        "completed_images": stats["completed_images"],
-        "completed_annotations": stats["completed_annotations"],
         "total_training_pairs": stats["total_training_pairs"],
     }
 
 
 # =====================================================
-# GET /images - 画像一覧（unannotated のみ）
+# GET /cases - 症例一覧
 # =====================================================
-@app.get("/images")
-def list_images():
-    result = dm.list_unannotated_images()
-    return {"images": result}
+@app.get("/cases")
+def list_cases():
+    return {"cases": dm.list_cases()}
 
 
 # =====================================================
-# GET /images/{image_id}/download - 画像ダウンロード（unannotated のみ）
+# GET /cases/{case_id}/images - 症例内の画像一覧
 # =====================================================
-@app.get("/images/{image_id}/download")
-def download_image(image_id: str):
-    if not validate_image_id(image_id):
-        return JSONResponse(status_code=400, content={"error": "invalid image_id"})
+@app.get("/cases/{case_id}/images")
+def list_case_images(case_id: str):
+    if not validate_case_id(case_id):
+        return JSONResponse(status_code=400, content={"error": "invalid case_id"})
+    if not dm.case_exists(case_id):
+        return JSONResponse(status_code=404, content={"error": "case not found"})
+    return {"case_id": case_id, "images": dm.list_images(case_id)}
 
-    path = dm.get_unannotated_image_path(image_id)
+
+# =====================================================
+# GET /cases/{case_id}/images/{image_id}/download - 画像ダウンロード
+# =====================================================
+@app.get("/cases/{case_id}/images/{image_id}/download")
+def download_image(case_id: str, image_id: str):
+    if not validate_case_id(case_id) or not validate_image_id(image_id):
+        return JSONResponse(status_code=400, content={"error": "invalid case_id or image_id"})
+
+    path = dm.get_image_path(case_id, image_id)
     if path is None:
         return JSONResponse(status_code=404, content={"error": "image not found"})
 
@@ -117,14 +135,110 @@ def download_image(image_id: str):
 
 
 # =====================================================
-# POST /infer/{image_id} - 推論実行（completed + unannotated 両方検索）
+# PUT /cases/{case_id}/submit/{image_id} - マスクアップロード
 # =====================================================
-@app.post("/infer/{image_id}")
-def infer(image_id: str):
-    if not validate_image_id(image_id):
-        return JSONResponse(status_code=400, content={"error": "invalid image_id"})
+@app.put("/cases/{case_id}/submit/{image_id}")
+async def submit_label(case_id: str, image_id: str, file: UploadFile = File(...)):
+    if not validate_case_id(case_id) or not validate_image_id(image_id):
+        return JSONResponse(status_code=400, content={"error": "invalid case_id or image_id"})
 
-    image_path = dm.get_image_path(image_id)
+    content = await file.read()
+    try:
+        dm.save_annotation(case_id, image_id, content)
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+    return {"status": "saved", "case_id": case_id, "image_id": image_id}
+
+
+# =====================================================
+# GET /cases/{case_id}/labels/{image_id}/download - マスクダウンロード
+# =====================================================
+@app.get("/cases/{case_id}/labels/{image_id}/download")
+def download_label(case_id: str, image_id: str):
+    if not validate_case_id(case_id) or not validate_image_id(image_id):
+        return JSONResponse(status_code=400, content={"error": "invalid case_id or image_id"})
+
+    path = dm.get_annotation_path(case_id, image_id)
+    if path is None:
+        return JSONResponse(status_code=404, content={"error": "label not found"})
+
+    return FileResponse(path, media_type="image/png")
+
+
+# =====================================================
+# GET /cases/{case_id}/next - 次の未ラベルスライス
+# =====================================================
+@app.get("/cases/{case_id}/next")
+def get_next_sample(case_id: str, strategy: str = "sequential"):
+    if not validate_case_id(case_id):
+        return JSONResponse(status_code=400, content={"error": "invalid case_id"})
+
+    image_id = dm.get_next_unlabeled(case_id, strategy=strategy)
+    if image_id is None:
+        return {"case_id": case_id, "image_id": None, "message": "all slices labeled"}
+    return {"case_id": case_id, "image_id": image_id}
+
+
+# =====================================================
+# GET /cases/{case_id}/manifest - スライスmanifest取得
+# =====================================================
+@app.get("/cases/{case_id}/manifest")
+def get_manifest(case_id: str):
+    if not validate_case_id(case_id):
+        return JSONResponse(status_code=400, content={"error": "invalid case_id"})
+
+    manifest = dm.get_manifest(case_id)
+    if manifest is None:
+        return JSONResponse(status_code=404, content={"error": "manifest not found"})
+    return manifest
+
+
+# =====================================================
+# GET /cases/{case_id}/label_config - クラス定義取得
+# =====================================================
+@app.get("/cases/{case_id}/label_config")
+def get_label_config(case_id: str):
+    if not validate_case_id(case_id):
+        return JSONResponse(status_code=400, content={"error": "invalid case_id"})
+
+    config = dm.get_label_config(case_id)
+    if config is None:
+        return JSONResponse(status_code=404, content={"error": "label_config not found"})
+    return config
+
+
+# =====================================================
+# POST /cases/{case_id}/reconstruct - NIfTIラベルマップ再統合
+# =====================================================
+@app.post("/cases/{case_id}/reconstruct")
+def reconstruct_nifti(case_id: str):
+    if not validate_case_id(case_id):
+        return JSONResponse(status_code=400, content={"error": "invalid case_id"})
+    if not dm.case_exists(case_id):
+        return JSONResponse(status_code=404, content={"error": "case not found"})
+
+    try:
+        from medical_adapter.reconstructor import reconstruct_label_volume
+        result = reconstruct_label_volume(case_id)
+        logger.info(f"NIfTI再統合完了: {case_id} → {result['output_path']}")
+        return result
+    except FileNotFoundError as e:
+        return JSONResponse(status_code=404, content={"error": str(e)})
+    except Exception as e:
+        logger.error(f"NIfTI再統合エラー: {case_id} - {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# =====================================================
+# POST /infer/{case_id}/{image_id} - 推論実行
+# =====================================================
+@app.post("/infer/{case_id}/{image_id}")
+def infer(case_id: str, image_id: str):
+    if not validate_case_id(case_id) or not validate_image_id(image_id):
+        return JSONResponse(status_code=400, content={"error": "invalid case_id or image_id"})
+
+    image_path = dm.get_image_path(case_id, image_id)
     if image_path is None:
         return JSONResponse(status_code=404, content={"error": "image not found"})
 
@@ -142,28 +256,11 @@ def infer(image_id: str):
                 status_code=503,
                 content={"error": "model not available, train first"},
             )
-        logger.info(f"推論完了: {image_id}")
+        logger.info(f"推論完了: {case_id}/{image_id}")
         return Response(content=mask_bytes, media_type="image/png")
     except Exception as e:
-        logger.error(f"推論エラー: {image_id} - {e}")
+        logger.error(f"推論エラー: {case_id}/{image_id} - {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
-
-
-# =====================================================
-# PUT /submit/{image_id} - マスクアップロード（unannotated のみ）
-# =====================================================
-@app.put("/submit/{image_id}")
-async def submit_label(image_id: str, file: UploadFile = File(...)):
-    if not validate_image_id(image_id):
-        return JSONResponse(status_code=400, content={"error": "invalid image_id"})
-
-    content = await file.read()
-    try:
-        dm.save_annotation(image_id, content)
-    except ValueError as e:
-        return JSONResponse(status_code=400, content={"error": str(e)})
-
-    return {"status": "saved", "image_id": image_id}
 
 
 # =====================================================
@@ -234,7 +331,7 @@ def run_training_task(training_pairs: list[tuple[str, str]], max_epochs: int):
 
 
 def update_training_status(epoch: int, dice: float, fold_idx: int = 0):
-    """学習中にepochごとに呼ばれるコールバック（global epoch + fold情報）"""
+    """学習中にepochごとに呼ばれるコールバック"""
     with training_lock:
         training_status["epoch"] = epoch
         training_status["best_dice"] = max(training_status["best_dice"], dice)
@@ -263,32 +360,6 @@ def cancel_training():
 @app.get("/status")
 def get_training_status():
     return training_status
-
-
-# =====================================================
-# GET /next - 次の未ラベル画像を返す（unannotated のみ）
-# =====================================================
-@app.get("/next")
-def get_next_sample(strategy: str = "random"):
-    image_id = dm.get_next_unlabeled(strategy=strategy)
-    if image_id is None:
-        return {"image_id": None, "message": "all images labeled"}
-    return {"image_id": image_id}
-
-
-# =====================================================
-# GET /labels/{image_id}/download - 確定済みマスクダウンロード
-# =====================================================
-@app.get("/labels/{image_id}/download")
-def download_label(image_id: str):
-    if not validate_image_id(image_id):
-        return JSONResponse(status_code=400, content={"error": "invalid image_id"})
-
-    path = dm.get_annotation_path(image_id)
-    if path is None:
-        return JSONResponse(status_code=404, content={"error": "label not found"})
-
-    return FileResponse(path, media_type="image/png")
 
 
 # =====================================================
@@ -335,7 +406,6 @@ def list_model_versions():
 # =====================================================
 @app.post("/models/versions/{version}/restore")
 def restore_model_version(version: str):
-    """指定バージョンのモデルを current_pt/ に復元"""
     with training_lock:
         if training_status["status"] == "running":
             return JSONResponse(
@@ -358,7 +428,6 @@ def restore_model_version(version: str):
 # =====================================================
 @app.post("/models/convert")
 def start_conversion(background_tasks: BackgroundTasks):
-    """バックグラウンドで PyTorch → CoreML 変換を実行"""
     if not os.path.exists(BEST_MODEL_PATH):
         return JSONResponse(
             status_code=404,
@@ -377,7 +446,6 @@ def start_conversion(background_tasks: BackgroundTasks):
 
 
 def run_conversion_task():
-    """バックグラウンドCoreML変換タスク"""
     try:
         from convert_coreml import convert_to_coreml
         convert_to_coreml()
@@ -403,8 +471,8 @@ if __name__ == "__main__":
     logger.info(f"モデルパス: {BEST_MODEL_PATH}")
     stats = dm.get_stats()
     logger.info(
-        f"データ統計: completed={stats['completed_images']}枚, "
-        f"unannotated={stats['unannotated_images']}枚 "
-        f"(labeled={stats['unannotated_labeled']})"
+        f"データ統計: {stats['total_cases']}症例, "
+        f"{stats['total_slices']}スライス "
+        f"(labeled={stats['labeled_slices']})"
     )
     uvicorn.run(app, host=SERVER_HOST, port=SERVER_PORT)
