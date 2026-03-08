@@ -7,3 +7,8 @@ segmentation-models-pytorch>=0.3.0
 Pillow>=11.0.0
 numpy>=1.26.0
 coremltools>=8.0
+# MRI (DICOM/NIfTI) support
+pydicom>=3.0.0
+SimpleITK>=2.3.0
+nibabel>=5.0.0
+matplotlib>=3.8.0
