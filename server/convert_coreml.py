@@ -13,7 +13,7 @@ import torch
 import coremltools as ct
 
 from model import create_model
-from config import BEST_MODEL_PATH, COREML_PATH, IMAGE_SIZE
+from config import BEST_MODEL_PATH, COREML_PATH, IMAGE_SIZE, IN_CHANNELS
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ def convert_to_coreml(pytorch_path: str = None, output_path: str = None) -> str:
     logger.info(f"PyTorchモデルロード完了: {pytorch_path}")
 
     # 2. TorchScriptに変換
-    dummy_input = torch.randn(1, 3, IMAGE_SIZE, IMAGE_SIZE)
+    dummy_input = torch.randn(1, IN_CHANNELS, IMAGE_SIZE, IMAGE_SIZE)
     traced = torch.jit.trace(model, dummy_input)
     logger.info("TorchScript変換完了")
 
@@ -52,7 +52,7 @@ def convert_to_coreml(pytorch_path: str = None, output_path: str = None) -> str:
     #    出力名 "logits" はiPadアプリ側と一致させる
     mlmodel = ct.convert(
         traced,
-        inputs=[ct.TensorType(name="image", shape=(1, 3, IMAGE_SIZE, IMAGE_SIZE))],
+        inputs=[ct.TensorType(name="image", shape=(1, IN_CHANNELS, IMAGE_SIZE, IMAGE_SIZE))],
         outputs=[ct.TensorType(name="logits")],
         convert_to="mlprogram",
     )

@@ -32,11 +32,12 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 
 # === モデル ===
-ENCODER_NAME = "resnet34"
-ENCODER_WEIGHTS = "imagenet"
-IN_CHANNELS = 3
-NUM_CLASSES = 7  # 0=背景 + 6クラス（外直筋,内直筋,上直筋,下直筋,視神経,眼球）
-IMAGE_SIZE = 512
+MODEL_TYPE = "vanilla"  # "vanilla" (MRI_TOM互換) or "smp" (resnet34 encoder)
+ENCODER_NAME = "resnet34"      # smpモード用
+ENCODER_WEIGHTS = "imagenet"   # smpモード用
+IN_CHANNELS = 1   # 1=grayscale MRI, 3=RGB
+NUM_CLASSES = 10  # 0=背景 + 9クラス（SR,LR,MR,IR,ON,FAT,LG,SO,EB）
+IMAGE_SIZE = 256  # vanilla U-Netのトレーニング解像度
 
 # === 学習 ===
 BATCH_SIZE = 4

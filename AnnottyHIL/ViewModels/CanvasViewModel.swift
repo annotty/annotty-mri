@@ -1935,11 +1935,11 @@ class CanvasViewModel: ObservableObject {
 
         let srcWidth = Int(textureManager.maskSize.width)
         let srcHeight = Int(textureManager.maskSize.height)
-        let dstWidth = 512
-        let dstHeight = 512
+        let dstWidth = 256
+        let dstHeight = 256
 
-        // Create RGBA buffer
-        var rgba = [UInt8](repeating: 0, count: dstWidth * dstHeight * 4)
+        // Grayscale index buffer (pixel value = class ID: 0=背景, 1-9=クラス)
+        var gray = [UInt8](repeating: 0, count: dstWidth * dstHeight)
 
         let scaleX = Float(srcWidth) / Float(dstWidth)
         let scaleY = Float(srcHeight) / Float(dstHeight)
@@ -1949,27 +1949,21 @@ class CanvasViewModel: ObservableObject {
                 let srcX = min(Int(Float(x) * scaleX), srcWidth - 1)
                 let srcY = min(Int(Float(y) * scaleY), srcHeight - 1)
                 let srcIdx = srcY * srcWidth + srcX
-                let dstIdx = (y * dstWidth + x) * 4
+                let dstIdx = y * dstWidth + x
 
-                if maskData[srcIdx] > 0 {
-                    rgba[dstIdx]     = 255  // R
-                    rgba[dstIdx + 1] = 0    // G
-                    rgba[dstIdx + 2] = 0    // B
-                    rgba[dstIdx + 3] = 255  // A
-                }
-                // else: remains all zeros (transparent)
+                gray[dstIdx] = maskData[srcIdx]  // class ID をそのまま保持
             }
         }
 
-        // Convert to PNG via CGContext → CGImage → UIImage
+        // Grayscale PNG via CGContext → CGImage → UIImage
         guard let context = CGContext(
-            data: &rgba,
+            data: &gray,
             width: dstWidth,
             height: dstHeight,
             bitsPerComponent: 8,
-            bytesPerRow: dstWidth * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            bytesPerRow: dstWidth,
+            space: CGColorSpaceCreateDeviceGray(),
+            bitmapInfo: CGImageAlphaInfo.none.rawValue
         ),
               let cgImage = context.makeImage() else {
             print("[HIL] Failed to create PNG context")

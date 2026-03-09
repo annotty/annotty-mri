@@ -122,6 +122,9 @@ def reconstruct_label_volume(case_id: str) -> dict:
         else:
             target_shape = (volume_shape[1], volume_shape[2])
 
+        # 逆回転（slicer側で90度右回転しているので、左に90度戻す）
+        index_map = np.rot90(index_map, k=1)
+
         if index_map.shape != target_shape:
             from PIL import Image as PILImage
             resized = PILImage.fromarray(index_map).resize(

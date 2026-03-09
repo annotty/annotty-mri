@@ -82,13 +82,33 @@ def validate_image_id(image_id: str) -> bool:
 
 
 # =====================================================
-# GET /info - サーバー情報
+# デフォルト症例の解決（iPad互換API用）
+# =====================================================
+def _get_default_case_id() -> str | None:
+    """未ラベルスライスが残っている最初の症例IDを返す（iPad互換エンドポイント用）。
+    全症例完了なら最後の症例を返す。"""
+    cases = dm.list_cases()
+    if not cases:
+        return None
+    for c in cases:
+        if c["unlabeled_slices"] > 0:
+            return c["case_id"]
+    return cases[-1]["case_id"]
+
+
+# =====================================================
+# GET /info - サーバー情報（iPad互換フィールド付き）
 # =====================================================
 @app.get("/info")
 def get_info():
     stats = dm.get_stats()
     return {
         "name": "Orbital MRI HIL Server",
+        # iPad互換フィールド（旧API: totalImages / labeledImages / unlabeledImages）
+        "total_images": stats["total_slices"],
+        "labeled_images": stats["labeled_slices"],
+        "unlabeled_images": stats["unlabeled_slices"],
+        # 新API用フィールド
         "total_cases": stats["total_cases"],
         "total_slices": stats["total_slices"],
         "labeled_slices": stats["labeled_slices"],
@@ -97,6 +117,86 @@ def get_info():
         "training_status": training_status["status"],
         "total_training_pairs": stats["total_training_pairs"],
     }
+
+
+# =====================================================
+# iPad互換エンドポイント（旧フラットAPI → デフォルト症例にプロキシ）
+# =====================================================
+@app.get("/images")
+def compat_list_images():
+    """iPad互換: GET /images → 最初の症例の画像一覧"""
+    case_id = _get_default_case_id()
+    if case_id is None:
+        return {"images": []}
+    return {"images": dm.list_images(case_id)}
+
+
+@app.get("/images/{image_id}/download")
+def compat_download_image(image_id: str):
+    """iPad互換: GET /images/{id}/download"""
+    if not validate_image_id(image_id):
+        return JSONResponse(status_code=400, content={"error": "invalid image_id"})
+    case_id = _get_default_case_id()
+    if case_id is None:
+        return JSONResponse(status_code=404, content={"error": "no cases available"})
+    path = dm.get_image_path(case_id, image_id)
+    if path is None:
+        return JSONResponse(status_code=404, content={"error": "image not found"})
+    return FileResponse(path, media_type="image/png")
+
+
+@app.get("/labels/{image_id}/download")
+def compat_download_label(image_id: str):
+    """iPad互換: GET /labels/{id}/download"""
+    if not validate_image_id(image_id):
+        return JSONResponse(status_code=400, content={"error": "invalid image_id"})
+    case_id = _get_default_case_id()
+    if case_id is None:
+        return JSONResponse(status_code=404, content={"error": "no cases available"})
+    path = dm.get_annotation_path(case_id, image_id)
+    if path is None:
+        return JSONResponse(status_code=404, content={"error": "label not found"})
+    return FileResponse(path, media_type="image/png")
+
+
+@app.put("/submit/{image_id}")
+async def compat_submit_label(image_id: str, file: UploadFile = File(...)):
+    """iPad互換: PUT /submit/{id}"""
+    if not validate_image_id(image_id):
+        return JSONResponse(status_code=400, content={"error": "invalid image_id"})
+    case_id = _get_default_case_id()
+    if case_id is None:
+        return JSONResponse(status_code=404, content={"error": "no cases available"})
+    content = await file.read()
+    try:
+        dm.save_annotation(case_id, image_id, content)
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+    return {"status": "saved", "image_id": image_id}
+
+
+@app.get("/next")
+def compat_get_next(strategy: str = "sequential"):
+    """iPad互換: GET /next"""
+    case_id = _get_default_case_id()
+    if case_id is None:
+        return {"image_id": None, "message": "no cases available"}
+    image_id = dm.get_next_unlabeled(case_id, strategy=strategy)
+    if image_id is None:
+        return {"image_id": None, "message": "all slices labeled"}
+    return {"image_id": image_id}
+
+
+@app.get("/label_config")
+def compat_get_label_config():
+    """iPad互換: GET /label_config → デフォルト症例のクラス定義"""
+    case_id = _get_default_case_id()
+    if case_id is None:
+        return JSONResponse(status_code=404, content={"error": "no cases available"})
+    config = dm.get_label_config(case_id)
+    if config is None:
+        return JSONResponse(status_code=404, content={"error": "label_config not found"})
+    return config
 
 
 # =====================================================

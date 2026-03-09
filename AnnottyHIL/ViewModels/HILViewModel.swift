@@ -128,6 +128,19 @@ class HILViewModel: ObservableObject {
         print("[HIL] Import: starting batch import of \(imageIds.count) images: \(imageIds.sorted())")
         await updateBaseURL()
         isLoading = true
+
+        // サーバーからlabel_configを取得してiPadに適用
+        do {
+            let labelConfig = try await client.downloadLabelConfig()
+            let entries = labelConfig.classes.map { cls in
+                ProjectFileService.LabelClassEntry(id: cls.id, name: cls.name, color: cls.color)
+            }
+            ProjectFileService.shared.saveLabelConfig(classes: entries)
+            canvasVM.loadLabelConfigFromProject()
+            print("[HIL] Import: applied \(entries.count) classes from server label_config")
+        } catch {
+            print("[HIL] Import: label_config not available from server: \(error)")
+        }
         errorMessage = nil
 
         var lastImportedId: String?

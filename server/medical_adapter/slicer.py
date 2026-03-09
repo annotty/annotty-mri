@@ -86,10 +86,11 @@ def slice_nifti_to_png(
         # W/L適用
         sl_8bit = apply_window_level(sl, wc, ww)
 
-        # グレースケール → RGB（3ch同値）でPNG保存
-        # iPadが通常のRGB画像として扱えるようにする
-        rgb = np.stack([sl_8bit, sl_8bit, sl_8bit], axis=-1)
-        pil_img = Image.fromarray(rgb)
+        # 90度右回転（DICOMの向きを正立に補正）
+        sl_8bit = np.rot90(sl_8bit, k=-1)
+
+        # グレースケールPNG保存（1ch、学習時もgrayscaleで使用）
+        pil_img = Image.fromarray(sl_8bit, mode="L")
 
         filename = f"slice_{i:02d}.png"
         pil_img.save(os.path.join(images_dir, filename))
@@ -112,7 +113,7 @@ def slice_nifti_to_png(
         "affine": affine.tolist(),
         "window_center": wc,
         "window_width": ww,
-        "preprocessing": [],
+        "preprocessing": [{"op": "rotate", "degrees": -90, "description": "90度右回転（DICOM正立補正）"}],
         "slices": slice_info,
         "created_at": datetime.now().isoformat(),
     }
@@ -125,12 +126,15 @@ def slice_nifti_to_png(
     if label_config is None:
         label_config = {
             "classes": [
-                {"id": 1, "name": "lateral_rectus", "color": [255, 0, 0]},
-                {"id": 2, "name": "medial_rectus", "color": [255, 128, 0]},
-                {"id": 3, "name": "superior_rectus", "color": [255, 255, 0]},
-                {"id": 4, "name": "inferior_rectus", "color": [0, 255, 0]},
-                {"id": 5, "name": "optic_nerve", "color": [0, 255, 255]},
-                {"id": 6, "name": "globe", "color": [0, 0, 255]},
+                {"id": 1, "name": "SR", "color": [255, 0, 0]},
+                {"id": 2, "name": "LR", "color": [255, 128, 0]},
+                {"id": 3, "name": "MR", "color": [255, 255, 0]},
+                {"id": 4, "name": "IR", "color": [0, 255, 0]},
+                {"id": 5, "name": "ON", "color": [0, 255, 255]},
+                {"id": 6, "name": "FAT", "color": [0, 128, 255]},
+                {"id": 7, "name": "LG", "color": [0, 0, 255]},
+                {"id": 8, "name": "SO", "color": [128, 0, 255]},
+                {"id": 9, "name": "EB", "color": [255, 0, 255]},
             ]
         }
 

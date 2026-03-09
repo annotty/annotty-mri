@@ -138,6 +138,23 @@ actor HILServerClient {
         return try decoder.decode(NextSampleResponse.self, from: data)
     }
 
+    /// Label config response model (matches server's label_config.json)
+    struct LabelConfigResponse: Codable {
+        let classes: [LabelClassInfo]
+    }
+
+    struct LabelClassInfo: Codable {
+        let id: Int
+        let name: String
+        let color: [Int]
+    }
+
+    /// Download label_config.json from server
+    func downloadLabelConfig() async throws -> LabelConfigResponse {
+        let data = try await get(path: "/label_config")
+        return try decoder.decode(LabelConfigResponse.self, from: data)
+    }
+
     /// Download the latest CoreML model ZIP from the server (~50MB, 300s timeout)
     func downloadLatestModel() async throws -> Data {
         let url = try makeURL(path: "/models/latest")
