@@ -9,9 +9,12 @@ import logging
 import threading
 from datetime import datetime
 
+from io import BytesIO
+
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
+from PIL import Image
 import uvicorn
 
 from config import (
@@ -81,6 +84,18 @@ def validate_image_id(image_id: str) -> bool:
     return True
 
 
+def _serve_image_as_rgb(path: str) -> Response:
+    """グレースケールPNGをRGBに変換して配信。
+    MTKTextureLoaderがグレースケールをR8テクスチャとして読み込むと
+    シェーダーで(R,0,0,1)=赤一色になるのを防ぐ。"""
+    img = Image.open(path)
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    return Response(content=buf.getvalue(), media_type="image/png")
+
+
 # =====================================================
 # デフォルト症例の解決（iPad互換API用）
 # =====================================================
@@ -124,16 +139,17 @@ def get_info():
 # =====================================================
 @app.get("/images")
 def compat_list_images():
-    """iPad互換: GET /images → 最初の症例の画像一覧"""
+    """iPad互換: GET /images → 最初の症例の画像一覧 + label_config"""
     case_id = _get_default_case_id()
     if case_id is None:
-        return {"images": []}
-    return {"images": dm.list_images(case_id)}
+        return {"images": [], "label_config": None}
+    label_config = dm.get_label_config(case_id)
+    return {"images": dm.list_images(case_id), "label_config": label_config}
 
 
 @app.get("/images/{image_id}/download")
 def compat_download_image(image_id: str):
-    """iPad互換: GET /images/{id}/download"""
+    """iPad互換: GET /images/{id}/download（グレースケール→RGB変換付き）"""
     if not validate_image_id(image_id):
         return JSONResponse(status_code=400, content={"error": "invalid image_id"})
     case_id = _get_default_case_id()
@@ -142,7 +158,7 @@ def compat_download_image(image_id: str):
     path = dm.get_image_path(case_id, image_id)
     if path is None:
         return JSONResponse(status_code=404, content={"error": "image not found"})
-    return FileResponse(path, media_type="image/png")
+    return _serve_image_as_rgb(path)
 
 
 @app.get("/labels/{image_id}/download")
@@ -224,6 +240,7 @@ def list_case_images(case_id: str):
 # =====================================================
 @app.get("/cases/{case_id}/images/{image_id}/download")
 def download_image(case_id: str, image_id: str):
+    """画像ダウンロード（グレースケール→RGB変換付き）"""
     if not validate_case_id(case_id) or not validate_image_id(image_id):
         return JSONResponse(status_code=400, content={"error": "invalid case_id or image_id"})
 
@@ -231,7 +248,7 @@ def download_image(case_id: str, image_id: str):
     if path is None:
         return JSONResponse(status_code=404, content={"error": "image not found"})
 
-    return FileResponse(path, media_type="image/png")
+    return _serve_image_as_rgb(path)
 
 
 # =====================================================

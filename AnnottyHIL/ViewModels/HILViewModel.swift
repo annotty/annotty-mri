@@ -35,7 +35,7 @@ class HILViewModel: ObservableObject {
     // MARK: - Connection
 
     /// Connect to server and fetch image list
-    func connect() async {
+    func connect(canvasVM: CanvasViewModel? = nil) async {
         guard settings.isConfigured else { return }
         await updateBaseURL()
         isLoading = true
@@ -48,6 +48,16 @@ class HILViewModel: ObservableObject {
 
             let response = try await client.listImages()
             imageList = response.images
+
+            // /images レスポンスに label_config が含まれていれば適用
+            if let labelConfig = response.labelConfig {
+                let entries = labelConfig.classes.map { cls in
+                    ProjectFileService.LabelClassEntry(id: cls.id, name: cls.name, color: cls.color)
+                }
+                ProjectFileService.shared.saveLabelConfig(classes: entries)
+                canvasVM?.loadLabelConfigFromProject()
+                print("[HIL] connect: applied \(entries.count) classes from server")
+            }
         } catch {
             isConnected = false
             errorMessage = error.localizedDescription
@@ -245,6 +255,19 @@ class HILViewModel: ObservableObject {
         await updateBaseURL()
         isLoading = true
         currentImageId = imageId
+
+        // サーバーからlabel_configを取得してiPadに適用
+        do {
+            let labelConfig = try await client.downloadLabelConfig()
+            let entries = labelConfig.classes.map { cls in
+                ProjectFileService.LabelClassEntry(id: cls.id, name: cls.name, color: cls.color)
+            }
+            ProjectFileService.shared.saveLabelConfig(classes: entries)
+            canvasVM.loadLabelConfigFromProject()
+            print("[HIL] loadImage: applied \(entries.count) classes from server label_config")
+        } catch {
+            print("[HIL] loadImage: label_config not available from server: \(error)")
+        }
 
         do {
             // Check if already in project — just navigate to it
