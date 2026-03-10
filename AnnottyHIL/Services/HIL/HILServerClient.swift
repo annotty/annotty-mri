@@ -41,6 +41,7 @@ actor HILServerClient {
 
     struct ImageListResponse: Codable {
         let images: [ImageInfo]
+        let labelConfig: LabelConfigResponse?
     }
 
     struct SubmitResponse: Codable {

@@ -57,8 +57,16 @@ class TextureManager {
     nonisolated static func prepareImageData(from url: URL) throws -> PreloadedImageData {
         guard let data = try? Data(contentsOf: url),
               let uiImage = UIImage(data: data),
-              let cgImage = uiImage.cgImage else {
+              let srcImage = uiImage.cgImage else {
             throw TextureError.invalidImage
+        }
+
+        // グレースケールPNGをRGBAに変換（MTKTextureLoaderがR8として読むと赤くなるため）
+        let cgImage: CGImage
+        if srcImage.colorSpace?.model == .monochrome || srcImage.bitsPerPixel < 16 {
+            cgImage = convertToRGBA(srcImage)
+        } else {
+            cgImage = srcImage
         }
 
         let width = cgImage.width
@@ -102,18 +110,31 @@ class TextureManager {
 
     /// Load source image from URL using MTKTextureLoader (GPU-accelerated)
     func loadImage(from url: URL) throws {
-        // Use MTKTextureLoader for fast GPU-accelerated loading
+        // グレースケールPNG対応: CGImage経由で読み込みRGBAに変換してからテクスチャ化
+        guard let data = try? Data(contentsOf: url),
+              let uiImage = UIImage(data: data),
+              let srcImage = uiImage.cgImage else {
+            throw TextureError.invalidImage
+        }
+
+        let finalImage: CGImage
+        if srcImage.colorSpace?.model == .monochrome || srcImage.bitsPerPixel < 16 {
+            finalImage = Self.convertToRGBA(srcImage)
+        } else {
+            finalImage = srcImage
+        }
+
         let options: [MTKTextureLoader.Option: Any] = [
             .textureUsage: MTLTextureUsage.shaderRead.rawValue,
             .textureStorageMode: MTLStorageMode.shared.rawValue,
             .SRGB: false
         ]
 
-        let texture = try textureLoader.newTexture(URL: url, options: options)
+        let texture = try textureLoader.newTexture(cgImage: finalImage, options: options)
         imageTexture = texture
 
-        let width = texture.width
-        let height = texture.height
+        let width = finalImage.width
+        let height = finalImage.height
         imageSize = CGSize(width: width, height: height)
 
         // Calculate mask dimensions with 4096 max clamp
@@ -333,6 +354,29 @@ class TextureManager {
         maskTexture = nil
         imageSize = .zero
         maskSize = .zero
+    }
+
+    // MARK: - Grayscale → RGBA Conversion
+
+    /// グレースケールCGImageをRGBA CGImageに変換
+    /// MTKTextureLoaderがグレースケールをR8テクスチャとして読み込むと
+    /// シェーダーで(R,0,0,1)=赤一色になるのを防ぐ
+    nonisolated static func convertToRGBA(_ grayscale: CGImage) -> CGImage {
+        let w = grayscale.width
+        let h = grayscale.height
+        guard let context = CGContext(
+            data: nil,
+            width: w,
+            height: h,
+            bitsPerComponent: 8,
+            bytesPerRow: w * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return grayscale
+        }
+        context.draw(grayscale, in: CGRect(x: 0, y: 0, width: w, height: h))
+        return context.makeImage() ?? grayscale
     }
 }
 

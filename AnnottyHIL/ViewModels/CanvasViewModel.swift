@@ -1924,8 +1924,8 @@ class CanvasViewModel: ObservableObject {
         applyUNetMask(binaryMask, size: CGSize(width: sourceWidth, height: sourceHeight))
     }
 
-    /// Export current mask as 512×512 RGBA PNG for server submission
-    /// classID > 0 → red (255,0,0,255), classID == 0 → transparent (0,0,0,0)
+    /// Export current mask as colored RGBA PNG for server submission
+    /// classID > 0 → class color (RGBA), classID == 0 → transparent (0,0,0,0)
     func exportMaskForServer() -> Data? {
         guard let textureManager = renderer?.textureManager,
               let maskData = textureManager.readMask() else {
@@ -1935,12 +1935,11 @@ class CanvasViewModel: ObservableObject {
 
         let srcWidth = Int(textureManager.maskSize.width)
         let srcHeight = Int(textureManager.maskSize.height)
-        let dstWidth = 256
-        let dstHeight = 256
+        let dstWidth = 512
+        let dstHeight = 512
 
-        // Grayscale index buffer (pixel value = class ID: 0=背景, 1-9=クラス)
-        var gray = [UInt8](repeating: 0, count: dstWidth * dstHeight)
-
+        // Downsample mask to destination size (nearest neighbor)
+        var resampledMask = [UInt8](repeating: 0, count: dstWidth * dstHeight)
         let scaleX = Float(srcWidth) / Float(dstWidth)
         let scaleY = Float(srcHeight) / Float(dstHeight)
 
@@ -1948,22 +1947,43 @@ class CanvasViewModel: ObservableObject {
             for x in 0..<dstWidth {
                 let srcX = min(Int(Float(x) * scaleX), srcWidth - 1)
                 let srcY = min(Int(Float(y) * scaleY), srcHeight - 1)
-                let srcIdx = srcY * srcWidth + srcX
-                let dstIdx = y * dstWidth + x
-
-                gray[dstIdx] = maskData[srcIdx]  // class ID をそのまま保持
+                resampledMask[y * dstWidth + x] = maskData[srcY * srcWidth + srcX]
             }
         }
 
-        // Grayscale PNG via CGContext → CGImage → UIImage
+        // Convert class IDs to colored RGBA pixels
+        let bytesPerPixel = 4
+        var pixelData = [UInt8](repeating: 0, count: dstWidth * dstHeight * bytesPerPixel)
+
+        for i in 0..<(dstWidth * dstHeight) {
+            let classID = Int(resampledMask[i])
+            let offset = i * bytesPerPixel
+
+            if classID > 0 && classID <= classRGBColors.count {
+                let (r, g, b) = classRGBColors[classID - 1]
+                pixelData[offset] = r
+                pixelData[offset + 1] = g
+                pixelData[offset + 2] = b
+                pixelData[offset + 3] = 255
+            } else {
+                // Background: transparent
+                pixelData[offset] = 0
+                pixelData[offset + 1] = 0
+                pixelData[offset + 2] = 0
+                pixelData[offset + 3] = 0
+            }
+        }
+
+        // RGBA PNG via CGContext → CGImage → UIImage
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let context = CGContext(
-            data: &gray,
+            data: &pixelData,
             width: dstWidth,
             height: dstHeight,
             bitsPerComponent: 8,
-            bytesPerRow: dstWidth,
-            space: CGColorSpaceCreateDeviceGray(),
-            bitmapInfo: CGImageAlphaInfo.none.rawValue
+            bytesPerRow: dstWidth * bytesPerPixel,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ),
               let cgImage = context.makeImage() else {
             print("[HIL] Failed to create PNG context")
