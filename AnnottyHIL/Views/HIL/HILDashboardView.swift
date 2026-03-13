@@ -14,6 +14,11 @@ struct HILDashboardView: View {
         !hilViewModel.imageList.isEmpty && selectedImageIds.count == hilViewModel.imageList.count
     }
 
+    /// 現在選択中の症例情報
+    private var selectedCaseInfo: HILServerClient.CaseInfo? {
+        hilViewModel.cases.first(where: { $0.caseId == hilViewModel.selectedCaseId })
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -22,6 +27,15 @@ struct HILDashboardView: View {
                     .padding()
 
                 Divider()
+
+                // Case selector
+                if !hilViewModel.cases.isEmpty {
+                    caseSelectorBar
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+
+                    Divider()
+                }
 
                 // Select All bar
                 if !hilViewModel.imageList.isEmpty {
@@ -68,6 +82,53 @@ struct HILDashboardView: View {
             }
             .task {
                 await hilViewModel.connect()
+            }
+        }
+    }
+
+    // MARK: - Case Selector
+
+    private var caseSelectorBar: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Label("Case", systemImage: "folder")
+                    .font(.subheadline.weight(.medium))
+
+                Spacer()
+
+                Picker("", selection: Binding(
+                    get: { hilViewModel.selectedCaseId ?? "" },
+                    set: { newValue in
+                        guard !newValue.isEmpty else { return }
+                        selectedImageIds.removeAll()
+                        Task {
+                            await hilViewModel.selectCase(caseId: newValue)
+                        }
+                    }
+                )) {
+                    ForEach(hilViewModel.cases) { caseInfo in
+                        HStack {
+                            Text(caseInfo.caseId)
+                            Text("(\(caseInfo.labeledSlices)/\(caseInfo.totalSlices))")
+                                .foregroundColor(.secondary)
+                        }
+                        .tag(caseInfo.caseId)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+
+            // Selected case progress
+            if let caseInfo = selectedCaseInfo {
+                HStack(spacing: 12) {
+                    ProgressView(value: Double(caseInfo.labeledSlices), total: max(Double(caseInfo.totalSlices), 1))
+                        .frame(maxWidth: .infinity)
+
+                    Text("\(caseInfo.labeledSlices)/\(caseInfo.totalSlices) labeled")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize()
+                }
             }
         }
     }
