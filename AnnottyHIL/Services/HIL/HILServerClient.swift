@@ -62,6 +62,24 @@ actor HILServerClient {
         let imageId: String?
     }
 
+    struct CaseInfo: Codable, Identifiable {
+        let caseId: String
+        let totalSlices: Int
+        let labeledSlices: Int
+        let unlabeledSlices: Int
+
+        var id: String { caseId }
+    }
+
+    struct CaseListResponse: Codable {
+        let cases: [CaseInfo]
+    }
+
+    struct CaseImageListResponse: Codable {
+        let caseId: String
+        let images: [ImageInfo]
+    }
+
     struct TrainStartResponse: Codable {
         let status: String
         let message: String?
@@ -153,6 +171,59 @@ actor HILServerClient {
     /// Download label_config.json from server
     func downloadLabelConfig() async throws -> LabelConfigResponse {
         let data = try await get(path: "/label_config")
+        return try decoder.decode(LabelConfigResponse.self, from: data)
+    }
+
+    // MARK: - Case-based API Methods
+
+    /// List all cases on the server
+    func listCases() async throws -> CaseListResponse {
+        let data = try await get(path: "/cases")
+        return try decoder.decode(CaseListResponse.self, from: data)
+    }
+
+    /// List images for a specific case
+    func listCaseImages(caseId: String) async throws -> CaseImageListResponse {
+        let data = try await get(path: "/cases/\(caseId)/images")
+        return try decoder.decode(CaseImageListResponse.self, from: data)
+    }
+
+    /// Download an image from a specific case
+    func downloadCaseImage(caseId: String, imageId: String) async throws -> Data {
+        return try await get(path: "/cases/\(caseId)/images/\(imageId)/download")
+    }
+
+    /// Download label (mask) from a specific case
+    func downloadCaseLabel(caseId: String, imageId: String) async throws -> Data {
+        return try await get(path: "/cases/\(caseId)/labels/\(imageId)/download")
+    }
+
+    /// Submit a labeled mask for a specific case
+    func submitCaseLabel(caseId: String, imageId: String, maskPNG: Data) async throws -> SubmitResponse {
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = Data()
+
+        body.append("--\(boundary)\r\n")
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"mask.png\"\r\n")
+        body.append("Content-Type: image/png\r\n\r\n")
+        body.append(maskPNG)
+        body.append("\r\n--\(boundary)--\r\n")
+
+        let url = try makeURL(path: "/cases/\(caseId)/submit/\(imageId)")
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        applyAuth(&request)
+        request.httpBody = body
+
+        let (data, response) = try await session.data(for: request)
+        try validateResponse(response, data: data)
+        return try decoder.decode(SubmitResponse.self, from: data)
+    }
+
+    /// Download label_config for a specific case
+    func downloadCaseLabelConfig(caseId: String) async throws -> LabelConfigResponse {
+        let data = try await get(path: "/cases/\(caseId)/label_config")
         return try decoder.decode(LabelConfigResponse.self, from: data)
     }
 

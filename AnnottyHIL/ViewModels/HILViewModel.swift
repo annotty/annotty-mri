@@ -19,6 +19,11 @@ class HILViewModel: ObservableObject {
     @Published var isSyncingModel = false
     @Published var syncError: String?
 
+    /// 症例一覧（サーバーから取得）
+    @Published var cases: [HILServerClient.CaseInfo] = []
+    /// 現在選択中の症例ID
+    @Published var selectedCaseId: String?
+
     // MARK: - Dependencies
 
     private let settings: HILSettings
@@ -34,7 +39,7 @@ class HILViewModel: ObservableObject {
 
     // MARK: - Connection
 
-    /// Connect to server and fetch image list
+    /// Connect to server and fetch case list + image list
     func connect(canvasVM: CanvasViewModel? = nil) async {
         guard settings.isConfigured else { return }
         await updateBaseURL()
@@ -46,17 +51,22 @@ class HILViewModel: ObservableObject {
             serverInfo = info
             isConnected = true
 
-            let response = try await client.listImages()
-            imageList = response.images
+            // 症例一覧を取得
+            let caseResponse = try await client.listCases()
+            cases = caseResponse.cases
 
-            // /images レスポンスに label_config が含まれていれば適用
-            if let labelConfig = response.labelConfig {
-                let entries = labelConfig.classes.map { cls in
-                    ProjectFileService.LabelClassEntry(id: cls.id, name: cls.name, color: cls.color)
-                }
-                ProjectFileService.shared.saveLabelConfig(classes: entries)
-                canvasVM?.loadLabelConfigFromProject()
-                print("[HIL] connect: applied \(entries.count) classes from server")
+            // 症例が未選択なら最初の未ラベルありの症例を自動選択
+            if selectedCaseId == nil, let firstUnlabeled = cases.first(where: { $0.unlabeledSlices > 0 }) {
+                selectedCaseId = firstUnlabeled.caseId
+            } else if selectedCaseId == nil, let first = cases.first {
+                selectedCaseId = first.caseId
+            }
+
+            // 選択中の症例の画像一覧を取得
+            if let caseId = selectedCaseId {
+                await fetchCaseImages(caseId: caseId, canvasVM: canvasVM)
+            } else {
+                imageList = []
             }
         } catch {
             isConnected = false
@@ -64,6 +74,43 @@ class HILViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    /// 症例を切り替える
+    func selectCase(caseId: String, canvasVM: CanvasViewModel? = nil) async {
+        selectedCaseId = caseId
+        isLoading = true
+        errorMessage = nil
+
+        await fetchCaseImages(caseId: caseId, canvasVM: canvasVM)
+
+        isLoading = false
+    }
+
+    /// 症例の画像一覧を取得（内部用）
+    private func fetchCaseImages(caseId: String, canvasVM: CanvasViewModel? = nil) async {
+        do {
+            let response = try await client.listCaseImages(caseId: caseId)
+            imageList = response.images
+
+            // label_configを取得して適用
+            if let canvasVM = canvasVM {
+                do {
+                    let labelConfig = try await client.downloadCaseLabelConfig(caseId: caseId)
+                    let entries = labelConfig.classes.map { cls in
+                        ProjectFileService.LabelClassEntry(id: cls.id, name: cls.name, color: cls.color)
+                    }
+                    ProjectFileService.shared.saveLabelConfig(classes: entries)
+                    canvasVM.loadLabelConfigFromProject()
+                    print("[HIL] connect: applied \(entries.count) classes from case \(caseId)")
+                } catch {
+                    print("[HIL] connect: label_config not available for case \(caseId): \(error)")
+                }
+            }
+        } catch {
+            imageList = []
+            errorMessage = error.localizedDescription
+        }
     }
 
     // MARK: - On-Device Prediction
@@ -93,9 +140,10 @@ class HILViewModel: ObservableObject {
             return
         }
 
-        // Verify the image exists on the server
+        // Use case-based API if a case is selected, otherwise fall back to flat API
+        let caseId = selectedCaseId
         let knownOnServer = imageList.contains(where: { $0.id == imageId })
-        print("[HIL] Submit: imageId=\(imageId), knownOnServer=\(knownOnServer), imageList.count=\(imageList.count)")
+        print("[HIL] Submit: imageId=\(imageId), caseId=\(caseId ?? "nil"), knownOnServer=\(knownOnServer)")
 
         await updateBaseURL()
         isHILSubmitting = true
@@ -109,15 +157,29 @@ class HILViewModel: ObservableObject {
             }
             print("[HIL] Submit: mask exported, size=\(maskPNG.count) bytes")
 
-            // Submit to server
-            let result = try await client.submitLabel(imageId: imageId, maskPNG: maskPNG)
-            print("[HIL] Submit: server response status=\(result.status)")
+            // Submit to server (case-based or flat)
+            if let caseId = caseId {
+                let result = try await client.submitCaseLabel(caseId: caseId, imageId: imageId, maskPNG: maskPNG)
+                print("[HIL] Submit: server response status=\(result.status)")
 
-            // Refresh image list & server info
-            let response = try await client.listImages()
-            imageList = response.images
+                // Refresh with case-based API
+                let response = try await client.listCaseImages(caseId: caseId)
+                imageList = response.images
+            } else {
+                let result = try await client.submitLabel(imageId: imageId, maskPNG: maskPNG)
+                print("[HIL] Submit: server response status=\(result.status)")
+
+                let response = try await client.listImages()
+                imageList = response.images
+            }
             serverInfo = try await client.getInfo()
             print("[HIL] Submit: refreshed imageList (\(imageList.count) images), labeled=\(serverInfo?.labeledImages ?? -1)")
+
+            // Refresh case list to update progress counts
+            if let _ = caseId {
+                let caseResponse = try await client.listCases()
+                cases = caseResponse.cases
+            }
 
             // Delete current image from device (navigates to adjacent image automatically)
             canvasVM.deleteCurrentImage()
@@ -135,21 +197,26 @@ class HILViewModel: ObservableObject {
 
     /// Import multiple images from the server into the project
     func importImages(imageIds: Set<String>, canvasVM: CanvasViewModel) async {
-        print("[HIL] Import: starting batch import of \(imageIds.count) images: \(imageIds.sorted())")
+        guard let caseId = selectedCaseId else {
+            errorMessage = "No case selected"
+            return
+        }
+
+        print("[HIL] Import: starting batch import of \(imageIds.count) images from case \(caseId)")
         await updateBaseURL()
         isLoading = true
 
         // サーバーからlabel_configを取得してiPadに適用
         do {
-            let labelConfig = try await client.downloadLabelConfig()
+            let labelConfig = try await client.downloadCaseLabelConfig(caseId: caseId)
             let entries = labelConfig.classes.map { cls in
                 ProjectFileService.LabelClassEntry(id: cls.id, name: cls.name, color: cls.color)
             }
             ProjectFileService.shared.saveLabelConfig(classes: entries)
             canvasVM.loadLabelConfigFromProject()
-            print("[HIL] Import: applied \(entries.count) classes from server label_config")
+            print("[HIL] Import: applied \(entries.count) classes from case \(caseId) label_config")
         } catch {
-            print("[HIL] Import: label_config not available from server: \(error)")
+            print("[HIL] Import: label_config not available for case \(caseId): \(error)")
         }
         errorMessage = nil
 
@@ -166,11 +233,12 @@ class HILViewModel: ObservableObject {
 
                 // Download image (cache → server)
                 let imageData: Data
-                if let cached = cache.loadImage(imageId: imageId) {
+                let cacheKey = "\(caseId)/\(imageId)"
+                if let cached = cache.loadImage(imageId: cacheKey) {
                     imageData = cached
                 } else {
-                    imageData = try await client.downloadImage(imageId: imageId)
-                    cache.saveImage(imageData, imageId: imageId)
+                    imageData = try await client.downloadCaseImage(caseId: caseId, imageId: imageId)
+                    cache.saveImage(imageData, imageId: cacheKey)
                 }
 
                 // Save to temp and import
@@ -180,8 +248,7 @@ class HILViewModel: ObservableObject {
 
                 // If the image has a label on the server, download and save as annotation
                 if let imageInfo = imageList.first(where: { $0.id == imageId }), imageInfo.hasLabel {
-                    let labelData = try await client.downloadLabel(imageId: imageId)
-                    // Find the imported image URL in the project
+                    let labelData = try await client.downloadCaseLabel(caseId: caseId, imageId: imageId)
                     let imageURLs = ProjectFileService.shared.getImageURLs()
                     if let imageURL = imageURLs.first(where: { $0.lastPathComponent == imageId }) {
                         try ProjectFileService.shared.saveAnnotation(labelData, for: imageURL)
@@ -256,17 +323,24 @@ class HILViewModel: ObservableObject {
         isLoading = true
         currentImageId = imageId
 
+        let caseId = selectedCaseId
+
         // サーバーからlabel_configを取得してiPadに適用
         do {
-            let labelConfig = try await client.downloadLabelConfig()
+            let labelConfig: HILServerClient.LabelConfigResponse
+            if let caseId = caseId {
+                labelConfig = try await client.downloadCaseLabelConfig(caseId: caseId)
+            } else {
+                labelConfig = try await client.downloadLabelConfig()
+            }
             let entries = labelConfig.classes.map { cls in
                 ProjectFileService.LabelClassEntry(id: cls.id, name: cls.name, color: cls.color)
             }
             ProjectFileService.shared.saveLabelConfig(classes: entries)
             canvasVM.loadLabelConfigFromProject()
-            print("[HIL] loadImage: applied \(entries.count) classes from server label_config")
+            print("[HIL] loadImage: applied \(entries.count) classes from label_config")
         } catch {
-            print("[HIL] loadImage: label_config not available from server: \(error)")
+            print("[HIL] loadImage: label_config not available: \(error)")
         }
 
         do {
@@ -276,11 +350,16 @@ class HILViewModel: ObservableObject {
             } else {
                 // Download (or use cache)
                 let imageData: Data
-                if let cached = cache.loadImage(imageId: imageId) {
+                let cacheKey = caseId.map { "\($0)/\(imageId)" } ?? imageId
+                if let cached = cache.loadImage(imageId: cacheKey) {
                     imageData = cached
                 } else {
-                    imageData = try await client.downloadImage(imageId: imageId)
-                    cache.saveImage(imageData, imageId: imageId)
+                    if let caseId = caseId {
+                        imageData = try await client.downloadCaseImage(caseId: caseId, imageId: imageId)
+                    } else {
+                        imageData = try await client.downloadImage(imageId: imageId)
+                    }
+                    cache.saveImage(imageData, imageId: cacheKey)
                 }
 
                 // Save to temp and import (imageId already includes extension)
