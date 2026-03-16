@@ -23,13 +23,20 @@ UNANNOTATED_ANNOTATIONS_DIR = os.path.join(DATA_DIR, "images_unannotated", "anno
 MODELS_DIR = os.path.join(DATA_DIR, "models")
 PYTORCH_DIR = os.path.join(MODELS_DIR, "pytorch")
 COREML_DIR = os.path.join(MODELS_DIR, "coreml")
-PRETRAINED_PATH = os.path.join(PYTORCH_DIR, "pretrained.pt")
 CURRENT_PT_DIR = os.path.join(PYTORCH_DIR, "current_pt")
 VERSIONS_DIR = os.path.join(PYTORCH_DIR, "versions")
-BEST_MODEL_PATH = os.path.join(CURRENT_PT_DIR, "best.pt")
+BEST_MODEL_PATH = os.path.join(CURRENT_PT_DIR, "best.pth")
 COREML_PATH = os.path.join(COREML_DIR, "SegmentationModel.mlpackage")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
+
+# --- 事前学習済みモデル（MRI_TOM vanilla_unet_resnet34, best Val Dice 0.9309） ---
+PRETRAINED_PATH = os.path.join(
+    os.path.expanduser("~"),
+    "MRI_TOM", "checkpoints",
+    "vanilla_unet_resnet34_20250808_192510",
+    "best_vanillaunet_model.pth",
+)
 
 # === モデル ===
 MODEL_TYPE = "vanilla"  # "vanilla" (MRI_TOM互換) or "smp" (resnet34 encoder)

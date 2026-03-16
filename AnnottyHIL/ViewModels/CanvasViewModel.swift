@@ -1858,6 +1858,7 @@ class CanvasViewModel: ObservableObject {
     }
 
     /// Apply U-Net mask result to the current mask texture
+    /// Mask values: multiclass (value = class ID) or binary (0/1, mapped to currentClassID)
     func applyUNetMask(_ unetMask: [UInt8], size: CGSize) {
         guard let textureManager = renderer?.textureManager else {
             print("[UNet] No texture manager")
@@ -1875,6 +1876,10 @@ class CanvasViewModel: ObservableObject {
             return
         }
 
+        // Detect if mask is multiclass (has values > 1) or binary (only 0/1)
+        let maxVal = unetMask.max() ?? 0
+        let isMulticlass = maxVal > 1
+
         // Create undo action
         let bbox = CGRect(x: 0, y: 0, width: CGFloat(maskWidth), height: CGFloat(maskHeight))
         let previousPatch = Data(currentMaskData)
@@ -1882,26 +1887,25 @@ class CanvasViewModel: ObservableObject {
         undoManager.pushUndo(action)
 
         // Scale U-Net mask to texture mask size
-        var newMaskData = currentMaskData  // Start with current mask
+        var newMaskData = [UInt8](repeating: 0, count: maskWidth * maskHeight)
 
         let scaleX = Float(srcWidth) / Float(maskWidth)
         let scaleY = Float(srcHeight) / Float(maskHeight)
 
-        // Replace mask with U-Net inference result
         for y in 0..<maskHeight {
             for x in 0..<maskWidth {
-                let srcX = Int(Float(x) * scaleX)
-                let srcY = Int(Float(y) * scaleY)
-
-                guard srcX < srcWidth && srcY < srcHeight else { continue }
+                let srcX = min(Int(Float(x) * scaleX), srcWidth - 1)
+                let srcY = min(Int(Float(y) * scaleY), srcHeight - 1)
 
                 let srcIdx = srcY * srcWidth + srcX
                 let dstIdx = y * maskWidth + x
 
-                if unetMask[srcIdx] > 0 {
-                    newMaskData[dstIdx] = UInt8(currentClassID)
+                if isMulticlass {
+                    // Multiclass: value is already the class ID
+                    newMaskData[dstIdx] = unetMask[srcIdx]
                 } else {
-                    newMaskData[dstIdx] = 0
+                    // Binary: map non-zero to current class
+                    newMaskData[dstIdx] = unetMask[srcIdx] > 0 ? UInt8(currentClassID) : 0
                 }
             }
         }
@@ -1910,7 +1914,11 @@ class CanvasViewModel: ObservableObject {
         do {
             try textureManager.uploadMask(newMaskData)
             maskModified = true
-            print("[UNet] Mask applied with class \(currentClassID)")
+            if isMulticlass {
+                print("[UNet] Multiclass mask applied (\(maxVal) classes)")
+            } else {
+                print("[UNet] Binary mask applied with class \(currentClassID)")
+            }
         } catch {
             print("[UNet] Failed to upload mask: \(error)")
         }

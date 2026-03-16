@@ -18,7 +18,7 @@ from PIL import Image
 import uvicorn
 
 from config import (
-    BEST_MODEL_PATH, COREML_PATH, LOG_DIR,
+    BEST_MODEL_PATH, COREML_PATH, LOG_DIR, PRETRAINED_PATH,
     STATIC_DIR, SERVER_HOST, SERVER_PORT, MIN_IMAGES_FOR_TRAINING,
     DEFAULT_MAX_EPOCHS, N_FOLDS,
 )
@@ -47,6 +47,12 @@ app.add_middleware(
 
 # === DataManager ===
 dm = DataManager()
+
+# === 起動時: 事前学習済みモデルをbest.pthにコピー（初回のみ） ===
+import shutil
+if not os.path.exists(BEST_MODEL_PATH) and os.path.exists(PRETRAINED_PATH):
+    shutil.copy2(PRETRAINED_PATH, BEST_MODEL_PATH)
+    logger.info(f"事前学習済みモデルをコピー: {PRETRAINED_PATH} → {BEST_MODEL_PATH}")
 
 # === グローバル学習ステータス (スレッドセーフ) ===
 training_status = {
@@ -367,7 +373,7 @@ def infer(case_id: str, image_id: str):
 
     try:
         from inference import run_inference
-        mask_bytes = run_inference(image_path, BEST_MODEL_PATH)
+        mask_bytes = run_inference(image_path, case_id=case_id)
         if mask_bytes is None:
             return JSONResponse(
                 status_code=503,
@@ -434,6 +440,14 @@ def run_training_task(training_pairs: list[tuple[str, str]], max_epochs: int):
             training_status["version"] = version
             training_status["completed_at"] = datetime.now().isoformat()
         logger.info(f"学習完了: best_dice={best_dice:.4f}, version={version}")
+
+        # 学習完了後に自動でCoreML変換（iPadモデル同期用）
+        try:
+            from convert_coreml import convert_to_coreml
+            convert_to_coreml()
+            logger.info("学習後CoreML自動変換完了")
+        except Exception as conv_err:
+            logger.warning(f"学習後CoreML自動変換失敗（手動で /models/convert を実行）: {conv_err}")
     except TrainingCancelled:
         with training_lock:
             training_status["status"] = "cancelled"

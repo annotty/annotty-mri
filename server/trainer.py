@@ -1,9 +1,10 @@
 """
-再学習ワーカー
-純PyTorch + smp。MONAI不要。
-annotations/ にある赤色マスクデータで U-Net を 5-fold CV で fine-tuning
+再学習ワーカー（マルチクラス版）
+眼窩MRI 10クラスセグメンテーション用 HITL fine-tuning
+入力: grayscale 1ch MRI → インデックスカラーPNGマスク → 5-fold CV
 """
 import os
+import json
 import random
 import shutil
 import logging
@@ -18,7 +19,7 @@ from PIL import Image
 
 from model import create_model
 from config import (
-    IMAGE_SIZE, IMAGENET_MEAN, IMAGENET_STD,
+    IMAGE_SIZE, NUM_CLASSES, IN_CHANNELS, SLICES_DIR,
     BATCH_SIZE, LEARNING_RATE, WEIGHT_DECAY,
     MIN_IMAGES_FOR_TRAINING, N_FOLDS,
     PRETRAINED_PATH, BEST_MODEL_PATH, get_fold_model_path,
@@ -33,79 +34,147 @@ class TrainingCancelled(Exception):
 
 
 # =====================================================
-# 損失関数: DiceBCELoss（純PyTorch実装）
+# 損失関数: CrossEntropy + Dice Loss（マルチクラス版）
 # =====================================================
-class DiceBCELoss(nn.Module):
-    """Dice Loss + Binary Cross Entropy の複合損失
-    血管セグメンテーションのclass imbalance対策
-    circle_mask で内接円内のみloss計算（眼底画像の有効領域限定）"""
+class MultiClassDiceCELoss(nn.Module):
+    """CrossEntropy + Dice Loss の複合損失（マルチクラスセグメンテーション用）
 
-    def __init__(self, dice_weight=1.0, bce_weight=1.0, smooth=1.0, circle_mask=None):
+    logits: (B, C, H, W) — モデル出力（raw logits）
+    targets: (B, H, W) — クラスインデックス (long, 0..NUM_CLASSES-1)
+    """
+
+    def __init__(self, num_classes: int, dice_weight=1.0, ce_weight=1.0, smooth=1.0):
         super().__init__()
+        self.num_classes = num_classes
         self.dice_weight = dice_weight
-        self.bce_weight = bce_weight
+        self.ce_weight = ce_weight
         self.smooth = smooth
-        # circle_mask: (H, W) bool tensor、円内=True
-        self.register_buffer("circle_mask", circle_mask)
 
     def forward(self, logits, targets):
-        # 内接円マスク適用: 円外のピクセルをloss計算から除外
-        if self.circle_mask is not None:
-            mask = self.circle_mask.unsqueeze(0).unsqueeze(0)  # (1,1,H,W)
-            logits = logits * mask
-            targets = targets * mask
+        # CrossEntropy Loss
+        ce_loss = F.cross_entropy(logits, targets)
 
-        probs = torch.sigmoid(logits)
+        # Dice Loss (per-class, excluding background=0)
+        probs = F.softmax(logits, dim=1)  # (B, C, H, W)
+        targets_onehot = F.one_hot(targets, self.num_classes)  # (B, H, W, C)
+        targets_onehot = targets_onehot.permute(0, 3, 1, 2).float()  # (B, C, H, W)
 
-        # Dice Loss
-        intersection = (probs * targets).sum(dim=(2, 3))
-        union = probs.sum(dim=(2, 3)) + targets.sum(dim=(2, 3))
-        dice = (2.0 * intersection + self.smooth) / (union + self.smooth)
-        dice_loss = 1.0 - dice.mean()
+        dice_sum = 0.0
+        count = 0
+        for c in range(1, self.num_classes):  # skip background
+            pred_c = probs[:, c]
+            gt_c = targets_onehot[:, c]
+            intersection = (pred_c * gt_c).sum()
+            union = pred_c.sum() + gt_c.sum()
+            dice_sum += (2.0 * intersection + self.smooth) / (union + self.smooth)
+            count += 1
 
-        # BCE Loss (pos_weight で血管ピクセルを重み付け)
-        if self.circle_mask is not None:
-            # 円内のみでBCE計算
-            mask_bool = self.circle_mask.bool().unsqueeze(0).unsqueeze(0).expand_as(logits)
-            logits_masked = logits[mask_bool]
-            targets_masked = targets[mask_bool]
-            pos_weight = torch.tensor([5.0], device=logits.device)
-            bce_loss = F.binary_cross_entropy_with_logits(
-                logits_masked, targets_masked, pos_weight=pos_weight
-            )
-        else:
-            pos_weight = torch.tensor([5.0], device=logits.device)
-            bce_loss = F.binary_cross_entropy_with_logits(
-                logits, targets, pos_weight=pos_weight
-            )
+        dice_loss = 1.0 - dice_sum / max(count, 1)
 
-        return self.dice_weight * dice_loss + self.bce_weight * bce_loss
+        return self.ce_weight * ce_loss + self.dice_weight * dice_loss
 
 
 # =====================================================
-# 評価指標: Dice Score（純PyTorch実装）
+# 評価指標: Multi-class Dice Score
 # =====================================================
-def dice_score(pred_mask, gt_mask, smooth=1.0):
-    """Dice係数を計算 (入力はバイナリマスク 0/1)"""
-    intersection = (pred_mask * gt_mask).sum()
-    union = pred_mask.sum() + gt_mask.sum()
-    return (2.0 * intersection + smooth) / (union + smooth)
+def multiclass_dice(pred: torch.Tensor, target: torch.Tensor,
+                    num_classes: int, smooth=1.0) -> float:
+    """マルチクラスDice係数を計算（背景除外の平均）
+
+    pred: (H, W) — argmax後のクラスインデックス
+    target: (H, W) — GTクラスインデックス
+    """
+    dice_sum = 0.0
+    count = 0
+    for c in range(1, num_classes):  # skip background
+        pred_c = (pred == c).float()
+        gt_c = (target == c).float()
+        if gt_c.sum() == 0 and pred_c.sum() == 0:
+            continue  # クラスが存在しないスライスはスキップ
+        intersection = (pred_c * gt_c).sum()
+        union = pred_c.sum() + gt_c.sum()
+        dice_sum += (2.0 * intersection + smooth) / (union + smooth)
+        count += 1
+    return dice_sum / max(count, 1)
 
 
 # =====================================================
-# データセット
+# カラーマスク → インデックスマスク変換
 # =====================================================
-class RetinalDataset(Dataset):
-    """眼底画像 + 赤色マスクのデータセット
+def _load_color_to_index_map(case_id: str) -> dict[tuple[int, int, int], int]:
+    """label_config.json からカラー→クラスID マッピングを構築"""
+    config_path = os.path.join(SLICES_DIR, case_id, "label_config.json")
+    if not os.path.exists(config_path):
+        return {}
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+    mapping = {}
+    for cls in config.get("classes", []):
+        color = tuple(cls["color"])
+        mapping[color] = cls["id"]
+    return mapping
+
+
+def _color_mask_to_index(mask_img: Image.Image, color_map: dict) -> np.ndarray:
+    """カラーマスクPNGをクラスインデックス配列に変換
+
+    mask_img: RGBA or RGB カラーマスク画像
+    color_map: {(R,G,B): class_id}
+    Returns: (H, W) ndarray of int64
+    """
+    if mask_img.mode == "RGBA":
+        rgba = np.array(mask_img)
+        rgb = rgba[:, :, :3]
+        alpha = rgba[:, :, 3]
+    else:
+        rgb = np.array(mask_img.convert("RGB"))
+        alpha = np.full(rgb.shape[:2], 255, dtype=np.uint8)
+
+    h, w = rgb.shape[:2]
+    index_mask = np.zeros((h, w), dtype=np.int64)
+
+    for color, class_id in color_map.items():
+        match = (
+            (rgb[:, :, 0] == color[0]) &
+            (rgb[:, :, 1] == color[1]) &
+            (rgb[:, :, 2] == color[2]) &
+            (alpha > 128)
+        )
+        index_mask[match] = class_id
+
+    return index_mask
+
+
+# =====================================================
+# データセット（マルチクラス版）
+# =====================================================
+class MRIDataset(Dataset):
+    """眼窩MRI + インデックスカラーマスクのデータセット
 
     pairs: list[tuple[str, str]] — (image_path, annotation_path) のフルパスペア
+    入力: grayscale 1ch, 256×256, [0,1]正規化
+    マスク: long tensor (H, W), 値 = クラスインデックス 0..NUM_CLASSES-1
     """
-    MEAN = np.array(IMAGENET_MEAN)
-    STD = np.array(IMAGENET_STD)
 
     def __init__(self, pairs: list[tuple[str, str]], augment: bool = False):
         self.pairs = pairs
         self.augment = augment
+        # カラーマップをキャッシュ（case_id → color_map）
+        self._color_maps: dict[str, dict] = {}
+
+    def _get_color_map(self, annotation_path: str) -> dict:
+        """アノテーションパスから case_id を推定してカラーマップを取得"""
+        # annotation_path: .../slices/{case_id}/annotations/slice_XX.png
+        parts = annotation_path.replace("\\", "/").split("/")
+        try:
+            ann_idx = parts.index("annotations")
+            case_id = parts[ann_idx - 1]
+        except (ValueError, IndexError):
+            case_id = "__unknown__"
+
+        if case_id not in self._color_maps:
+            self._color_maps[case_id] = _load_color_to_index_map(case_id)
+        return self._color_maps[case_id]
 
     def __len__(self):
         return len(self.pairs)
@@ -113,37 +182,34 @@ class RetinalDataset(Dataset):
     def __getitem__(self, idx):
         image_path, annotation_path = self.pairs[idx]
 
-        # 画像読み込み + 正規化
-        img = Image.open(image_path).convert("RGB")
+        # 画像読み込み: grayscale 1ch, [0,1] 正規化
+        img = Image.open(image_path).convert("L")
         img = img.resize((IMAGE_SIZE, IMAGE_SIZE))
         img_arr = np.array(img).astype(np.float32) / 255.0
-        img_arr = (img_arr - self.MEAN) / self.STD
-        img_tensor = torch.from_numpy(img_arr).permute(2, 0, 1).float()
+        img_tensor = torch.from_numpy(img_arr).unsqueeze(0).float()  # (1, H, W)
 
-        # マスク読み込み: 複数形式に対応
-        #   - グレースケール(L): 白(255)=血管, 黒(0)=背景
-        #   - RGBA赤色マスク: 赤(255,0,0,255)=血管, 白(255,255,255,255)or透明(0,0,0,0)=背景
+        # マスク読み込み: インデックスカラーPNG → クラスインデックス
         mask_raw = Image.open(annotation_path)
         mask_resized = mask_raw.resize((IMAGE_SIZE, IMAGE_SIZE), Image.NEAREST)
-        if mask_raw.mode == "L":
-            binary = (np.array(mask_resized) > 128).astype(np.float32)
+
+        color_map = self._get_color_map(annotation_path)
+        if color_map:
+            index_mask = _color_mask_to_index(mask_resized, color_map)
         else:
-            mask_arr = np.array(mask_resized.convert("RGBA"))
-            binary = (
-                (mask_arr[:, :, 0] > 128) &
-                (mask_arr[:, :, 1] < 128) &
-                (mask_arr[:, :, 3] > 128)
-            ).astype(np.float32)
-        mask_tensor = torch.from_numpy(binary).unsqueeze(0)  # (1, 512, 512)
+            # fallback: グレースケールマスク（レガシー互換）
+            gray = np.array(mask_resized.convert("L"))
+            index_mask = (gray > 128).astype(np.int64)
+
+        mask_tensor = torch.from_numpy(index_mask).long()  # (H, W)
 
         # Data Augmentation (学習時のみ)
         if self.augment:
             if torch.rand(1).item() > 0.5:
                 img_tensor = torch.flip(img_tensor, [2])
-                mask_tensor = torch.flip(mask_tensor, [2])
+                mask_tensor = torch.flip(mask_tensor, [1])
             if torch.rand(1).item() > 0.5:
                 img_tensor = torch.flip(img_tensor, [1])
-                mask_tensor = torch.flip(mask_tensor, [1])
+                mask_tensor = torch.flip(mask_tensor, [0])
 
         return img_tensor, mask_tensor
 
@@ -174,7 +240,7 @@ def _train_single_fold(
     epoch_log_callback=None,
 ) -> float:
     """1つのfoldを学習し、best_diceを返す。
-    各foldはPRETRAINED_PATH or ImageNet重みから独立に学習開始（アンサンブル多様性確保）。
+    各foldはPRETRAINED_PATH or ランダム重みから独立に学習開始（アンサンブル多様性確保）。
     """
     device = torch.device("cuda")
 
@@ -182,21 +248,26 @@ def _train_single_fold(
         f"[Fold {fold_idx}] train={len(train_pairs)}, val={len(val_pairs)}"
     )
 
-    train_ds = RetinalDataset(train_pairs, augment=True)
-    val_ds = RetinalDataset(val_pairs, augment=False)
+    train_ds = MRIDataset(train_pairs, augment=True)
+    val_ds = MRIDataset(val_pairs, augment=False)
 
     train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
 
-    # モデル: PRETRAINED_PATH or ImageNet重みから独立に初期化
+    # モデル: PRETRAINED_PATH（MRI_TOM best model）から初期化
     model = create_model().to(device)
     if os.path.exists(PRETRAINED_PATH):
         checkpoint = torch.load(PRETRAINED_PATH, map_location=device, weights_only=False)
         model.load_state_dict(checkpoint["model_state_dict"])
         logger.info(f"[Fold {fold_idx}] 事前学習モデルをロード: {PRETRAINED_PATH}")
+    elif os.path.exists(BEST_MODEL_PATH):
+        # HITL学習済みモデルがある場合はそこから継続
+        checkpoint = torch.load(BEST_MODEL_PATH, map_location=device, weights_only=False)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        logger.info(f"[Fold {fold_idx}] 既存best.pthをロード: {BEST_MODEL_PATH}")
 
     # 損失関数・Optimizer
-    loss_fn = DiceBCELoss()
+    loss_fn = MultiClassDiceCELoss(num_classes=NUM_CLASSES)
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max_epochs)
 
@@ -229,10 +300,10 @@ def _train_single_fold(
         with torch.no_grad():
             for images, masks in val_loader:
                 images, masks = images.to(device), masks.to(device)
-                preds = (torch.sigmoid(model(images)) > 0.5).float()
+                preds = torch.argmax(model(images), dim=1)  # (B, H, W)
                 for i in range(preds.shape[0]):
-                    d = dice_score(preds[i], masks[i])
-                    dice_scores.append(d.item())
+                    d = multiclass_dice(preds[i], masks[i], NUM_CLASSES)
+                    dice_scores.append(d.item() if isinstance(d, torch.Tensor) else float(d))
 
         mean_dice = np.mean(dice_scores) if dice_scores else 0.0
 

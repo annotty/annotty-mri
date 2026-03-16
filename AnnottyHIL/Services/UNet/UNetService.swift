@@ -4,9 +4,9 @@ import CoreGraphics
 import Combine
 import Metal
 
-/// Result of U-Net ensemble mask prediction
+/// Result of U-Net mask prediction
 struct UNetMaskResult {
-    /// Binary mask (0 or 1) at original image resolution
+    /// Mask at original image resolution: class IDs (0=background, 1-9=class) for multiclass, or 0/1 for binary
     let mask: [UInt8]
     /// Size of the mask (matches original image)
     let size: CGSize
@@ -21,6 +21,10 @@ enum ModelSource: String {
 /// U-Net ensemble inference service (4-fold, prompt-free)
 /// Loads 4 CoreML models and averages their sigmoid outputs for robust segmentation.
 /// When a downloaded server model is available, uses that single model instead.
+///
+/// Model variants:
+///   - Bundled: 4-fold ensemble, RGB 3ch, 512×512, binary output
+///   - Downloaded (server): single model, grayscale 1ch, 256×256, 10-class output
 @MainActor
 final class UNetService: ObservableObject {
     // MARK: - Published State
@@ -34,11 +38,20 @@ final class UNetService: ObservableObject {
 
     private var models: [MLModel] = []
 
-    /// Model input size (must match conversion script)
-    static let inputSize: Int = 512
+    /// Model input size — depends on model source
+    static let bundledInputSize: Int = 512
+    static let downloadedInputSize: Int = 256
+
+    /// Number of output classes for downloaded server model
+    static let numClasses: Int = 10
 
     /// Number of ensemble folds
     static let foldCount: Int = 4
+
+    /// Effective input size for the currently loaded model
+    var inputSize: Int {
+        modelSource == .downloaded ? Self.downloadedInputSize : Self.bundledInputSize
+    }
 
     // MARK: - ImageNet Normalization Constants
     // ResNet34 encoder was trained with these values
@@ -118,7 +131,7 @@ final class UNetService: ObservableObject {
 
     /// Predict segmentation mask from a CGImage (prompt-free, full-image)
     func predict(cgImage: CGImage) async throws -> UNetMaskResult {
-        guard isReady else {
+        guard isReady, let firstModel = models.first else {
             throw UNetError.modelNotLoaded
         }
 
@@ -127,8 +140,96 @@ final class UNetService: ObservableObject {
 
         let originalSize = CGSize(width: cgImage.width, height: cgImage.height)
 
+        // Determine model type from actual model input description,
+        // not from modelSource flag (which can be stale due to race conditions)
+        let isMulticlass = Self.isMulticlassModel(firstModel)
+        let size = isMulticlass ? Self.downloadedInputSize : Self.bundledInputSize
+
+        if isMulticlass {
+            return try await predictMulticlass(cgImage: cgImage, originalSize: originalSize, size: size)
+        } else {
+            return try await predictBundledEnsemble(cgImage: cgImage, originalSize: originalSize, size: size)
+        }
+    }
+
+    /// Check if a CoreML model expects single-channel (grayscale) input = multiclass server model
+    /// Server model: [1, 1, 256, 256], Bundled: [1, 3, 512, 512]
+    private static func isMulticlassModel(_ model: MLModel) -> Bool {
+        guard let imageInput = model.modelDescription.inputDescriptionsByName["image"],
+              let constraint = imageInput.multiArrayConstraint else {
+            return false
+        }
+        // shape[1] = number of input channels: 1 = grayscale (server), 3 = RGB (bundled)
+        return constraint.shape.count >= 2 && constraint.shape[1].intValue == 1
+    }
+
+    // MARK: - Downloaded Server Model (1ch grayscale, 256×256, 10-class)
+
+    private func predictMulticlass(cgImage: CGImage, originalSize: CGSize, size: Int) async throws -> UNetMaskResult {
+        // 1. Create grayscale 1-channel input [1, 1, 256, 256]
+        guard let inputArray = createGrayscaleInputArray(from: cgImage, size: size) else {
+            throw UNetError.invalidInput
+        }
+
+        print("[UNet] Running server model inference (1ch, \(size)×\(size), \(Self.numClasses) classes)...")
+
+        let model = models[0]
+        let input = try MLDictionaryFeatureProvider(dictionary: ["image": inputArray])
+        let output = try model.prediction(from: input)
+
+        guard let logits = output.featureValue(for: "logits")?.multiArrayValue
+                ?? output.featureNames.lazy.compactMap({ output.featureValue(for: $0)?.multiArrayValue }).first else {
+            throw UNetError.inferenceError("No logits output from server model")
+        }
+
+        // 2. Argmax across classes → class ID per pixel
+        //    logits shape: [1, numClasses, H, W]
+        let pixelCount = size * size
+        var smallMask = [UInt8](repeating: 0, count: pixelCount)
+        let numClasses = Self.numClasses
+
+        if logits.dataType == .float16 {
+            let ptr = logits.dataPointer.assumingMemoryBound(to: Float16.self)
+            for i in 0..<pixelCount {
+                var maxVal = Float(ptr[i])  // class 0
+                var maxClass: UInt8 = 0
+                for c in 1..<numClasses {
+                    let val = Float(ptr[c * pixelCount + i])
+                    if val > maxVal {
+                        maxVal = val
+                        maxClass = UInt8(c)
+                    }
+                }
+                smallMask[i] = maxClass
+            }
+        } else {
+            let ptr = logits.dataPointer.assumingMemoryBound(to: Float.self)
+            for i in 0..<pixelCount {
+                var maxVal = ptr[i]  // class 0
+                var maxClass: UInt8 = 0
+                for c in 1..<numClasses {
+                    let val = ptr[c * pixelCount + i]
+                    if val > maxVal {
+                        maxVal = val
+                        maxClass = UInt8(c)
+                    }
+                }
+                smallMask[i] = maxClass
+            }
+        }
+
+        // 3. Upscale to original size (nearest neighbor for class IDs)
+        let upscaledMask = upscaleMaskNearest(smallMask, fromSize: size, toSize: originalSize)
+
+        print("[UNet] Multiclass prediction complete (\(Int(originalSize.width))x\(Int(originalSize.height)))")
+        return UNetMaskResult(mask: upscaledMask, size: originalSize)
+    }
+
+    // MARK: - Bundled Ensemble (3ch RGB, 512×512, binary)
+
+    private func predictBundledEnsemble(cgImage: CGImage, originalSize: CGSize, size: Int) async throws -> UNetMaskResult {
         // 1. Resize image to 512x512 and create ImageNet-normalized MLMultiArray
-        guard let inputArray = createNormalizedInputArray(from: cgImage, size: Self.inputSize) else {
+        guard let inputArray = createNormalizedInputArray(from: cgImage, size: size) else {
             throw UNetError.invalidInput
         }
 
@@ -142,7 +243,6 @@ final class UNetService: ObservableObject {
                         "image": inputArray
                     ])
                     let output = try model.prediction(from: input)
-                    // Try "logits" first, fall back to first MultiArray output
                     let logits: MLMultiArray
                     if let named = output.featureValue(for: "logits")?.multiArrayValue {
                         logits = named
@@ -164,8 +264,8 @@ final class UNetService: ObservableObject {
 
         print("[UNet] All folds completed, averaging sigmoid outputs...")
 
-        // 3. Average sigmoid(logits) across 4 folds (matching Python reference)
-        let pixelCount = Self.inputSize * Self.inputSize
+        // 3. Average sigmoid(logits) across 4 folds
+        let pixelCount = size * size
         var sigmoidSum = [Float](repeating: 0, count: pixelCount)
 
         for logits in logitsArrays {
@@ -184,35 +284,28 @@ final class UNetService: ObservableObject {
             }
         }
 
-        // 4. Average + threshold (0.5) + circular mask → binary mask at 512x512
-        //    Training excluded pixels outside the lens circle, so we hard-mask
-        //    to a circle inscribed in the square (center, radius = size/2).
+        // 4. Average + threshold + circular mask → binary mask
         let divisor = Float(models.count)
-        let half = Float(Self.inputSize) / 2.0
+        let half = Float(size) / 2.0
         let radiusSq = half * half
         var smallMask = [UInt8](repeating: 0, count: pixelCount)
-        for y in 0..<Self.inputSize {
+        for y in 0..<size {
             let dy = Float(y) + 0.5 - half
             let dySq = dy * dy
-            for x in 0..<Self.inputSize {
+            for x in 0..<size {
                 let dx = Float(x) + 0.5 - half
                 if dx * dx + dySq > radiusSq {
-                    continue  // outside lens circle → leave as 0
+                    continue
                 }
-                let i = y * Self.inputSize + x
+                let i = y * size + x
                 smallMask[i] = (sigmoidSum[i] / divisor) > 0.5 ? 1 : 0
             }
         }
 
-        // 5. Upscale to original image size using bilinear interpolation
-        let upscaledMask = upscaleMask(
-            smallMask,
-            fromSize: Self.inputSize,
-            toSize: originalSize
-        )
+        // 5. Upscale to original image size
+        let upscaledMask = upscaleMask(smallMask, fromSize: size, toSize: originalSize)
 
         print("[UNet] Prediction complete (\(Int(originalSize.width))x\(Int(originalSize.height)))")
-
         return UNetMaskResult(mask: upscaledMask, size: originalSize)
     }
 
@@ -314,6 +407,76 @@ final class UNetService: ObservableObject {
         }
 
         return array
+    }
+
+    /// Create grayscale 1-channel MLMultiArray [1, 1, H, W] for downloaded server model
+    /// Normalization: (pixel/255 - mean_gray) / std_gray  (ImageNet grayscale approx)
+    private func createGrayscaleInputArray(from image: CGImage, size: Int) -> MLMultiArray? {
+        // Draw image into RGBA buffer at target size
+        let bytesPerPixel = 4
+        let bytesPerRow = size * bytesPerPixel
+        var pixelData = [UInt8](repeating: 0, count: size * size * bytesPerPixel)
+
+        guard let context = CGContext(
+            data: &pixelData,
+            width: size,
+            height: size,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+        ) else {
+            return nil
+        }
+
+        context.interpolationQuality = .high
+        context.draw(image, in: CGRect(x: 0, y: 0, width: size, height: size))
+
+        // Create MLMultiArray with shape [1, 1, H, W]
+        guard let array = try? MLMultiArray(
+            shape: [1, 1, NSNumber(value: size), NSNumber(value: size)],
+            dataType: .float32
+        ) else {
+            return nil
+        }
+
+        let ptr = array.dataPointer.assumingMemoryBound(to: Float.self)
+
+        // Convert RGB to grayscale luminance, then normalize to [0, 1]
+        // Server model uses raw grayscale / 255.0 (no ImageNet normalization for 1ch)
+        for y in 0..<size {
+            for x in 0..<size {
+                let pixelIndex = (y * size + x) * bytesPerPixel
+                let r = Float(pixelData[pixelIndex])
+                let g = Float(pixelData[pixelIndex + 1])
+                let b = Float(pixelData[pixelIndex + 2])
+                // Standard luminance weights
+                let gray = (0.2989 * r + 0.5870 * g + 0.1140 * b) / 255.0
+                ptr[y * size + x] = gray
+            }
+        }
+
+        return array
+    }
+
+    /// Upscale class ID mask using nearest neighbor (preserves discrete class IDs)
+    private func upscaleMaskNearest(_ mask: [UInt8], fromSize srcSize: Int, toSize size: CGSize) -> [UInt8] {
+        let dstWidth = Int(size.width)
+        let dstHeight = Int(size.height)
+        var result = [UInt8](repeating: 0, count: dstWidth * dstHeight)
+
+        let scaleX = Float(srcSize) / Float(dstWidth)
+        let scaleY = Float(srcSize) / Float(dstHeight)
+
+        for y in 0..<dstHeight {
+            for x in 0..<dstWidth {
+                let srcX = min(Int(Float(x) * scaleX), srcSize - 1)
+                let srcY = min(Int(Float(y) * scaleY), srcSize - 1)
+                result[y * dstWidth + x] = mask[srcY * srcSize + srcX]
+            }
+        }
+
+        return result
     }
 
     /// Upscale binary mask from square size to target size using bilinear interpolation
