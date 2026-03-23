@@ -1,7 +1,6 @@
 # Experimental Record テンプレート
 
 ## 作業・コード変更記録
-
 ```markdown
 # {yyyy-mm-dd} 実験記録
 ## {タイトル}
@@ -15,7 +14,6 @@
 ```
 
 ## 解析記録
-
 ```markdown
 # {yyyy-mm-dd} 解析記録
 ## {タイトル}
