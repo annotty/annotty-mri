@@ -70,8 +70,6 @@ class PNGExporter {
         for (classID, mask) in masks {
             guard let color = classColors[classID] else { continue }
 
-            let invScale = 1.0 / scaleFactor
-
             for y in 0..<height {
                 for x in 0..<width {
                     // Map to mask coordinates

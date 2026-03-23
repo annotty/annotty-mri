@@ -53,7 +53,7 @@ class ExportService {
                 scaleFactor: scaleFactor
             )
 
-            for (filename, data) in pngData {
+            for (_, data) in pngData {
                 if let url = projectService.getLabelURL(for: imageURL, format: .png) {
                     try data.write(to: url)
                     exportedURLs.append(url)

@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 import simd
 
-nonisolated(unsafe) private let classRGBColors: [(UInt8, UInt8, UInt8)] = [
+nonisolated private let classRGBColors: [(UInt8, UInt8, UInt8)] = [
     (255, 0, 0),       // 1: red
     (255, 128, 0),     // 2: orange
     (255, 255, 0),     // 3: yellow
@@ -21,7 +21,7 @@ nonisolated(unsafe) private let classRGBColors: [(UInt8, UInt8, UInt8)] = [
     (0, 128, 128)      // 16: teal
 ]
 
-nonisolated(unsafe) private let exactColorLookup: [UInt32: UInt8] = {
+nonisolated private let exactColorLookup: [UInt32: UInt8] = {
     var table = [UInt32: UInt8]()
     for (index, (r, g, b)) in classRGBColors.enumerated() {
         let key = UInt32(r) << 16 | UInt32(g) << 8 | UInt32(b)

@@ -3,7 +3,7 @@ import ZIPFoundation
 
 /// Manages downloaded CoreML models in Application Support/HILModels/
 /// Handles ZIP extraction, version tracking, and persistent storage.
-nonisolated actor ModelSyncManager {
+actor ModelSyncManager {
     static let shared = ModelSyncManager()
 
     // MARK: - Types
