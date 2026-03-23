@@ -14,8 +14,19 @@
 		BF772C012F5DC04500763F2A /* Annotty-MRI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Annotty-MRI.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		BF772C032F5DC04500763F2A /* Annotty-MRI */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BF772C402F5DC04500763F2A /* Exceptions for "Annotty-MRI" folder in "Annotty-MRI" target */,
+			);
+			path = "Annotty-MRI";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		BF772C202F5DC04500763F2A /* Exceptions for "Annotty-MRI" folder in "Annotty-MRI" target */ = {
+		BF772C402F5DC04500763F2A /* Exceptions for "Annotty-MRI" folder in "Annotty-MRI" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -23,17 +34,6 @@
 			target = BF772C002F5DC04500763F2A /* Annotty-MRI */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		BF772C032F5DC04500763F2A /* Annotty-MRI */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				BF772C202F5DC04500763F2A /* Exceptions for "Annotty-MRI" folder in "Annotty-MRI" target */,
-			);
-			path = "Annotty-MRI";
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		BF772BFE2F5DC04500763F2A /* Frameworks */ = {
