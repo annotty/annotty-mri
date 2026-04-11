@@ -4,6 +4,7 @@ import SwiftUI
 /// Displays a semi-transparent stroke to indicate the area being smoothed
 struct SmoothStrokeOverlay: View {
     let points: [CGPoint]
+    /// Line width in screen coordinates (matches actual stroke width drawn to mask)
     let brushRadius: CGFloat
 
     /// Stroke color (semi-transparent white for visibility on any background)
@@ -26,7 +27,7 @@ struct SmoothStrokeOverlay: View {
                 path,
                 with: .color(strokeColor),
                 style: StrokeStyle(
-                    lineWidth: brushRadius * 2,
+                    lineWidth: brushRadius,
                     lineCap: .round,
                     lineJoin: .round
                 )

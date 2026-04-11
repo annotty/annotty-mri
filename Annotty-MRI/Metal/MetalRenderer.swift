@@ -235,11 +235,12 @@ class MetalRenderer: NSObject, ObservableObject {
         // Convert screen point to mask coordinates
         let maskPoint = canvasTransform.screenToMask(screenPoint)
 
-        // Brush radius in mask coordinates
-        // UI radius is in original image pixels, multiply by maskScaleFactor to get mask pixels
-        // Also multiply by contentScaleFactor to match the pixel-based coordinate system
-        // (touch points are converted to pixels, so radius must be too)
-        let adjustedRadius = radius * canvasTransform.maskScaleFactor * Float(contentScaleFactor)
+        // `radius` parameter is the brush LINE WIDTH in original image pixels
+        // (UI "1" = 1px line). Convert to a mask-coordinate radius:
+        //   mask radius = (lineWidth / 2) * maskScaleFactor
+        // Note: do NOT multiply by contentScaleFactor — `params.center` lives in
+        // mask pixels (image pixels × maskScaleFactor), independent of Retina.
+        let adjustedRadius = radius * 0.5 * canvasTransform.maskScaleFactor
 
         // Paint value: currentClassID when painting, 0 when erasing
         let paintValue: UInt8 = isPainting ? UInt8(currentClassID) : 0
@@ -292,9 +293,9 @@ class MetalRenderer: NSObject, ObservableObject {
             depth: 1
         )
 
-        // Brush radius in mask coordinates (UI "1" = 1 original image pixel)
-        // Multiply by contentScaleFactor to match pixel-based coordinate system
-        let adjustedRadius = radius * canvasTransform.maskScaleFactor * Float(contentScaleFactor)
+        // `radius` parameter is line WIDTH in original image pixels (UI "1" = 1px line).
+        // Convert to mask-coordinate radius (= half-width × maskScaleFactor).
+        let adjustedRadius = radius * 0.5 * canvasTransform.maskScaleFactor
 
         // Paint value: currentClassID when painting, 0 when erasing
         let paintValue: UInt8 = isPainting ? UInt8(currentClassID) : 0

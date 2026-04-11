@@ -771,9 +771,13 @@ class CanvasViewModel: ObservableObject {
 
     // MARK: - Drawing
 
-    /// Brush preview size for UI (in screen coordinates, reflects actual drawn size)
+    /// Brush preview size for UI (in SwiftUI points, reflects actual drawn size on screen)
+    /// `brushRadius` is the line WIDTH in original image pixels.
+    /// `currentScale` is screen-pixel-per-image-pixel (fitToView uses drawable
+    /// pixel size), so we divide by `contentScaleFactor` to convert pixels → points.
     var brushPreviewSize: CGFloat {
-        CGFloat(brushRadius) * 2 * currentScale
+        let scaleFactor = renderer?.contentScaleFactor ?? 1.0
+        return CGFloat(brushRadius) * currentScale / scaleFactor
     }
 
     /// Counter for throttling bbox expansion checks
@@ -880,8 +884,8 @@ class CanvasViewModel: ObservableObject {
                     guard maskPoint.x.isFinite && maskPoint.y.isFinite else { continue }
 
                     let maskScaleFactor = renderer?.canvasTransform.maskScaleFactor ?? 2.0
-                    // Radius in mask coordinates (UI "1" = 1 original image pixel)
-                    let radius = CGFloat(brushRadius * maskScaleFactor) + 1.0
+                    // brushRadius is line WIDTH in image pixels → half × maskScaleFactor = mask radius
+                    let radius = CGFloat(brushRadius * 0.5 * maskScaleFactor) + 1.0
                     let stampRect = CGRect(
                         x: maskPoint.x - radius,
                         y: maskPoint.y - radius,
@@ -2025,7 +2029,7 @@ class CanvasViewModel: ObservableObject {
 
         // Initialize bbox with brush radius padding
         let maskScaleFactor = renderer?.canvasTransform.maskScaleFactor ?? 2.0
-        let padding = CGFloat(brushRadius * maskScaleFactor)
+        let padding = CGFloat(brushRadius * 0.5 * maskScaleFactor)
         smoothStrokeBbox = CGRect(
             x: maskPoint.x - padding,
             y: maskPoint.y - padding,
@@ -2046,7 +2050,7 @@ class CanvasViewModel: ObservableObject {
         guard maskPoint.x.isFinite && maskPoint.y.isFinite else { return }
 
         let maskScaleFactor = renderer?.canvasTransform.maskScaleFactor ?? 2.0
-        let padding = CGFloat(brushRadius * maskScaleFactor)
+        let padding = CGFloat(brushRadius * 0.5 * maskScaleFactor)
         let pointRect = CGRect(
             x: maskPoint.x - padding,
             y: maskPoint.y - padding,

@@ -21,7 +21,7 @@ struct CanvasTransform {
     static let minScale: CGFloat = 0.1
 
     /// Maximum allowed zoom scale
-    static let maxScale: CGFloat = 10.0
+    static let maxScale: CGFloat = 30.0
 
     /// Combined transformation matrix
     var matrix: CGAffineTransform {

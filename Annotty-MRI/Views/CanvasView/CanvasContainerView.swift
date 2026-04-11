@@ -78,9 +78,11 @@ struct CanvasContainerView: View {
 
                 // Smooth stroke path overlay
                 if !viewModel.smoothStrokePoints.isEmpty {
+                    // Reuse brushPreviewSize so the overlay's lineWidth matches the
+                    // actual mask stroke width in SwiftUI points (handles Retina/iPad).
                     SmoothStrokeOverlay(
                         points: viewModel.smoothStrokePoints,
-                        brushRadius: CGFloat(viewModel.brushRadius) * viewModel.currentScale
+                        brushRadius: viewModel.brushPreviewSize
                     )
                     .allowsHitTesting(false)
                 }
