@@ -305,16 +305,19 @@ final class UNetService: ObservableObject {
                 sigmoidAvg[i] /= divisor
             }
 
-            // Apply circular mask to probabilities
-            let half = Float(inputSize) / 2.0
-            let radiusSq = half * half
-            for y in 0..<inputSize {
-                let dy = Float(y) + 0.5 - half
-                let dySq = dy * dy
-                for x in 0..<inputSize {
-                    let dx = Float(x) + 0.5 - half
-                    if dx * dx + dySq > radiusSq {
-                        sigmoidAvg[y * inputSize + x] = 0  // outside lens circle
+            // Apply circular mask to probabilities (bundled fundus models only)
+            // MRI images are rectangular — no lens circle masking needed
+            if modelSource == .bundled {
+                let half = Float(inputSize) / 2.0
+                let radiusSq = half * half
+                for y in 0..<inputSize {
+                    let dy = Float(y) + 0.5 - half
+                    let dySq = dy * dy
+                    for x in 0..<inputSize {
+                        let dx = Float(x) + 0.5 - half
+                        if dx * dx + dySq > radiusSq {
+                            sigmoidAvg[y * inputSize + x] = 0  // outside lens circle
+                        }
                     }
                 }
             }
@@ -405,12 +408,71 @@ final class UNetService: ObservableObject {
         }
     }
 
-    /// Create normalized MLMultiArray from CGImage, adapting to modelConfig
+    /// モデルソースに応じて正規化方式を切り替える
+    /// - downloaded (MRI): グレースケール + percentile clip + Z-score + 3ch複製
+    /// - bundled (眼底): RGB + ImageNet正規化（従来通り）
+    private func createNormalizedInputArray(from image: CGImage, size: Int) -> MLMultiArray? {
+        if modelSource == .downloaded {
+            return createZScoreInputArray(from: image, size: size)
+        } else {
+            return createImageNetInputArray(from: image, size: size)
+        }
+    }
+
+    /// Downloaded (MRI) 用: グレースケール + percentile clip(1-99%) + Z-score + 3ch複製
+    /// 学習時の前処理 (TOM NIfTI → percentile clip → Z-score → 3ch duplicate) と同一
+    private func createZScoreInputArray(from image: CGImage, size: Int) -> MLMultiArray? {
+        // 1. グレースケールで size×size に描画
+        var pixelData = [UInt8](repeating: 0, count: size * size)
+        guard let context = CGContext(
+            data: &pixelData,
+            width: size, height: size,
+            bitsPerComponent: 8,
+            bytesPerRow: size,
+            space: CGColorSpaceCreateDeviceGray(),
+            bitmapInfo: CGImageAlphaInfo.none.rawValue
+        ) else { return nil }
+        context.interpolationQuality = .high
+        context.draw(image, in: CGRect(x: 0, y: 0, width: size, height: size))
+
+        // 2. Float 変換
+        var floatData = pixelData.map { Float($0) }
+        let n = floatData.count
+
+        // 3. Percentile clip (1-99%)
+        let sorted = floatData.sorted()
+        let p1  = sorted[max(0,     Int(Float(n) * 0.01))]
+        let p99 = sorted[min(n - 1, Int(Float(n) * 0.99))]
+        floatData = floatData.map { min(max($0, p1), p99) }
+
+        // 4. Z-score 正規化
+        let mean = floatData.reduce(0, +) / Float(n)
+        let variance = floatData.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Float(n)
+        let std = variance > 1e-6 ? sqrt(variance) : 1.0
+        floatData = floatData.map { ($0 - mean) / std }
+
+        // 5. MLMultiArray [1, 3, size, size] にグレースケールを3ch複製
+        guard let array = try? MLMultiArray(
+            shape: [1, 3, NSNumber(value: size), NSNumber(value: size)],
+            dataType: .float32
+        ) else { return nil }
+
+        let ptr = array.dataPointer.assumingMemoryBound(to: Float.self)
+        let ch = size * size
+        for i in 0..<ch {
+            ptr[0 * ch + i] = floatData[i]   // R ← gray
+            ptr[1 * ch + i] = floatData[i]   // G ← gray
+            ptr[2 * ch + i] = floatData[i]   // B ← gray
+        }
+        return array
+    }
+
+    /// Bundled (眼底) 用: RGB + ImageNet正規化
     ///
     /// - 1ch model: RGB→grayscale (0.299R + 0.587G + 0.114B), then /255.0 → [1, 1, H, W]
     /// - 3ch model (bundled ImageType): (pixel - 255*mean) / std → [1, 3, H, W]
     /// - 3ch model (downloaded TensorType): (pixel/255 - mean) / std → [1, 3, H, W]
-    private func createNormalizedInputArray(from image: CGImage, size: Int) -> MLMultiArray? {
+    private func createImageNetInputArray(from image: CGImage, size: Int) -> MLMultiArray? {
         // Draw image into an RGBA byte buffer at target size
         let bytesPerPixel = 4
         let bytesPerRow = size * bytesPerPixel
