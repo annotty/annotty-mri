@@ -18,21 +18,32 @@ from PIL import Image
 import uvicorn
 
 from config import (
-    BEST_MODEL_PATH, COREML_PATH, LOG_DIR, PRETRAINED_PATH,
+    BEST_MODEL_PATH, COREML_PATH, LOG_DIR,
     STATIC_DIR, SERVER_HOST, SERVER_PORT, MIN_IMAGES_FOR_TRAINING,
     DEFAULT_MAX_EPOCHS, N_FOLDS,
 )
 from data_manager import DataManager
 
 # === ログ設定 ===
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler(os.path.join(LOG_DIR, "server.log"), encoding="utf-8"),
-        logging.StreamHandler(),
-    ],
+# basicConfig はルートロガーにハンドラーが既にある場合 no-op になるため、
+# ルートロガーに直接追加して encoding="utf-8" を確実に適用する
+_log_format = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+_root_logger = logging.getLogger()
+_root_logger.setLevel(logging.INFO)
+
+_file_handler = logging.FileHandler(
+    os.path.join(LOG_DIR, "server.log"), encoding="utf-8"
 )
+_file_handler.setFormatter(_log_format)
+
+_stream_handler = logging.StreamHandler()
+_stream_handler.setFormatter(_log_format)
+
+# 重複追加を防ぐ
+if not _root_logger.handlers:
+    _root_logger.addHandler(_file_handler)
+    _root_logger.addHandler(_stream_handler)
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Orbital MRI HIL Server")
@@ -47,12 +58,6 @@ app.add_middleware(
 
 # === DataManager ===
 dm = DataManager()
-
-# === 起動時: 事前学習済みモデルをbest.pthにコピー（初回のみ） ===
-import shutil
-if not os.path.exists(BEST_MODEL_PATH) and os.path.exists(PRETRAINED_PATH):
-    shutil.copy2(PRETRAINED_PATH, BEST_MODEL_PATH)
-    logger.info(f"事前学習済みモデルをコピー: {PRETRAINED_PATH} → {BEST_MODEL_PATH}")
 
 # === グローバル学習ステータス (スレッドセーフ) ===
 training_status = {
@@ -373,7 +378,7 @@ def infer(case_id: str, image_id: str):
 
     try:
         from inference import run_inference
-        mask_bytes = run_inference(image_path, case_id=case_id)
+        mask_bytes = run_inference(image_path, BEST_MODEL_PATH)
         if mask_bytes is None:
             return JSONResponse(
                 status_code=503,
@@ -402,17 +407,17 @@ def start_training(background_tasks: BackgroundTasks, max_epochs: int = DEFAULT_
         )
 
     with training_lock:
-        if training_status["status"] == "running":
+        if training_status["status"] in ("running", "converting"):
             return JSONResponse(
                 status_code=409,
-                content={"error": "training already running"},
+                content={"error": "training or conversion already running"},
             )
         training_status["status"] = "running"
         training_status["epoch"] = 0
-        training_status["max_epochs"] = N_FOLDS * max_epochs
+        training_status["max_epochs"] = N_FOLDS * max_epochs  # effective_folds確定後に更新
         training_status["best_dice"] = 0.0
         training_status["current_fold"] = 0
-        training_status["n_folds"] = N_FOLDS
+        training_status["n_folds"] = N_FOLDS  # effective_folds確定後に更新
         training_status["started_at"] = datetime.now().isoformat()
         training_status["completed_at"] = None
         training_status.pop("error", None)
@@ -424,10 +429,10 @@ def start_training(background_tasks: BackgroundTasks, max_epochs: int = DEFAULT_
 
 
 def run_training_task(training_pairs: list[tuple[str, str]], max_epochs: int):
-    """バックグラウンド学習タスク"""
+    """バックグラウンド学習タスク。完了後にCoreML変換を自動実行。"""
     from trainer import train_model, TrainingCancelled
     try:
-        best_dice, version = train_model(
+        best_dice, version, effective_folds = train_model(
             training_pairs=training_pairs,
             model_save_path=BEST_MODEL_PATH,
             max_epochs=max_epochs,
@@ -435,19 +440,21 @@ def run_training_task(training_pairs: list[tuple[str, str]], max_epochs: int):
             cancel_event=training_cancel_event,
         )
         with training_lock:
-            training_status["status"] = "completed"
+            training_status["status"] = "converting"
             training_status["best_dice"] = best_dice
             training_status["version"] = version
-            training_status["completed_at"] = datetime.now().isoformat()
-        logger.info(f"学習完了: best_dice={best_dice:.4f}, version={version}")
+            training_status["n_folds"] = effective_folds
+        logger.info(f"学習完了: best_dice={best_dice:.4f}, version={version} → CoreML変換開始")
 
-        # 学習完了後に自動でCoreML変換（iPadモデル同期用）
-        try:
-            from convert_coreml import convert_to_coreml
-            convert_to_coreml()
-            logger.info("学習後CoreML自動変換完了")
-        except Exception as conv_err:
-            logger.warning(f"学習後CoreML自動変換失敗（手動で /models/convert を実行）: {conv_err}")
+        # CoreML変換を自動実行（Windows環境のためWSL経由）
+        from convert_coreml import convert_to_coreml_wsl
+        convert_to_coreml_wsl()
+
+        with training_lock:
+            training_status["status"] = "completed"
+            training_status["completed_at"] = datetime.now().isoformat()
+        logger.info("CoreML変換完了")
+
     except TrainingCancelled:
         with training_lock:
             training_status["status"] = "cancelled"
@@ -458,7 +465,7 @@ def run_training_task(training_pairs: list[tuple[str, str]], max_epochs: int):
             training_status["status"] = "error"
             training_status["error"] = str(e)
             training_status["completed_at"] = datetime.now().isoformat()
-        logger.error(f"学習エラー: {e}")
+        logger.error(f"学習/変換エラー: {e}")
 
 
 def update_training_status(epoch: int, dice: float, fold_idx: int = 0):
@@ -578,8 +585,8 @@ def start_conversion(background_tasks: BackgroundTasks):
 
 def run_conversion_task():
     try:
-        from convert_coreml import convert_to_coreml
-        convert_to_coreml()
+        from convert_coreml import convert_to_coreml_wsl
+        convert_to_coreml_wsl()
         logger.info("CoreML変換完了")
     except Exception as e:
         logger.error(f"CoreML変換エラー: {e}")

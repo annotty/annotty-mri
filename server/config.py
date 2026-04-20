@@ -23,28 +23,22 @@ UNANNOTATED_ANNOTATIONS_DIR = os.path.join(DATA_DIR, "images_unannotated", "anno
 MODELS_DIR = os.path.join(DATA_DIR, "models")
 PYTORCH_DIR = os.path.join(MODELS_DIR, "pytorch")
 COREML_DIR = os.path.join(MODELS_DIR, "coreml")
+PRETRAINED_PATH = os.path.join(PYTORCH_DIR, "pretrained.pt")
 CURRENT_PT_DIR = os.path.join(PYTORCH_DIR, "current_pt")
 VERSIONS_DIR = os.path.join(PYTORCH_DIR, "versions")
-BEST_MODEL_PATH = os.path.join(CURRENT_PT_DIR, "best.pth")
+BEST_MODEL_PATH = os.path.join(CURRENT_PT_DIR, "best.pt")
 COREML_PATH = os.path.join(COREML_DIR, "SegmentationModel.mlpackage")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 
-# --- 事前学習済みモデル（MRI_TOM vanilla_unet_resnet34, best Val Dice 0.9309） ---
-PRETRAINED_PATH = os.path.join(
-    os.path.expanduser("~"),
-    "MRI_TOM", "checkpoints",
-    "vanilla_unet_resnet34_20250808_192510",
-    "best_vanillaunet_model.pth",
-)
-
 # === モデル ===
-MODEL_TYPE = "vanilla"  # "vanilla" (MRI_TOM互換) or "smp" (resnet34 encoder)
+MODEL_TYPE = "vanilla"  # "mri" (encoders/bottleneck/upconvs/decoders) or "vanilla" or "smp"
 ENCODER_NAME = "resnet34"      # smpモード用
 ENCODER_WEIGHTS = "imagenet"   # smpモード用
-IN_CHANNELS = 1   # 1=grayscale MRI, 3=RGB
-NUM_CLASSES = 10  # 0=背景 + 9クラス（SR,LR,MR,IR,ON,FAT,LG,SO,EB）
-IMAGE_SIZE = 256  # vanilla U-Netのトレーニング解像度
+IN_CHANNELS = 3   # 3=RGB（Swift側が3ch RGB前提）
+NUM_CLASSES = 10  # 10=multi-class（MRI臓器セグメンテーション）
+IMAGE_SIZE = 512       # Swift側が512×512前提（表示・API I/Oサイズ）
+MODEL_INPUT_SIZE = 256 # モデル学習時の入力サイズ（推論時はここにリサイズ→マスクをIMAGE_SIZEにアップスケール）
 
 # === 学習 ===
 BATCH_SIZE = 4
@@ -53,6 +47,10 @@ LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 1e-5
 N_FOLDS = 5
 MIN_IMAGES_FOR_TRAINING = 2
+
+# === TOM500 混合学習 ===
+# TOM500 PNG変換済みディレクトリ（存在しない場合は混合学習をスキップ）
+TOM_PNG_DIR = r"D:\TOM500\dataset\train_png"
 
 # === ImageNet正規化 ===
 IMAGENET_MEAN = [0.485, 0.456, 0.406]

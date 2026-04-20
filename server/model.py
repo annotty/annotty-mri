@@ -21,6 +21,9 @@ def create_model(model_type: str = None):
             n_classes=NUM_CLASSES,
             bilinear=True,
         )
+    elif model_type == "mri":
+        from mri_unet import MRIUNet
+        return MRIUNet(in_channels=IN_CHANNELS, n_classes=NUM_CLASSES)
     elif model_type == "smp":
         import segmentation_models_pytorch as smp
         from config import ENCODER_NAME, ENCODER_WEIGHTS
